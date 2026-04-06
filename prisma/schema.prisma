@@ -1,51 +1,11 @@
-// Prisma Schema — Food Optimizer
-// Dev: SQLite | Prod: PostgreSQL (Supabase)
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "sqlite"
-  // Para produção, mudar para:
-  // provider = "postgresql"
-  // url      = env("DATABASE_URL")
-  url = "file:./dev.db"
+  url      = "file:./dev.db"
 }
-
-// ─────────────────────────────────────────────
-// AUTENTICAÇÃO
-// ─────────────────────────────────────────────
-
-model User {
-  id                String    @id @default(cuid())
-  name              String
-  email             String    @unique
-  passwordHash      String
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  // Perfil e questionário
-  profile           UserProfile?
-  tasteProfile      TasteProfile?
-  onboardingAnswers OnboardingAnswer[]
-
-  // Tracking
-  bodyRecords       BodyRecord[]
-  exerciseLogs      ExerciseLog[]
-  mealLogs          MealLog[]
-  diets             Diet[]
-  bloodExams        BloodExam[]
-
-  // IA
-  chatMessages      ChatMessage[]
-
-  @@map("users")
-}
-
-// ─────────────────────────────────────────────
-// PERFIL DO USUÁRIO (QUESTIONÁRIO)
-// ─────────────────────────────────────────────
 
 enum Sex {
   MALE
@@ -53,11 +13,11 @@ enum Sex {
 }
 
 enum ActivityLevel {
-  SEDENTARY       // Trabalho de escritório, sem exercício
-  LIGHT           // Exercício leve 1-3x/semana
-  MODERATE        // Exercício moderado 3-5x/semana
-  ACTIVE          // Exercício intenso 6-7x/semana
-  VERY_ACTIVE     // Atleta / 2x por dia
+  SEDENTARY
+  LIGHT
+  MODERATE
+  ACTIVE
+  VERY_ACTIVE
 }
 
 enum Goal {
@@ -105,47 +65,48 @@ enum IntensityLevel {
   INTENSE
 }
 
+model User {
+  id                String             @id @default(cuid())
+  name              String
+  email             String             @unique
+  passwordHash      String
+  profile           UserProfile?
+  tasteProfile      TasteProfile?
+  onboardingAnswers OnboardingAnswer[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@map("users")
+}
+
 model UserProfile {
-  id                    String              @id @default(cuid())
-  userId                String              @unique
-  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Dados corporais
-  age                   Int
-  sex                   Sex
-  heightCm              Float
-  weightKg              Float
-  bodyFatPercentage     Float?              // Pode ser nulo no início
-
-  // Localização geográfica
-  state                 String?              // UF para considerar alimentos regionais e preços
-  city                  String?
-
-  // Exercício
-  activityLevel         ActivityLevel
-  exerciseFrequency     Int                 // Dias por semana
-  primaryExerciseType   ExerciseType?
-  exerciseDurationMin   Int?                // Duração média em minutos
-  exerciseIntensity     IntensityLevel?
-
-  // Hábitos
-  mealsPerDay           Int                 @default(3)
-  workRoutine           WorkRoutine
-  dietaryRestrictions   DietaryRestriction  @default(NONE)
-  weeklyFoodBudget      Float?              // R$
-
-  // Objetivo
-  goal                  Goal
-
-  // Calculados automaticamente pelo sistema
-  tdee                  Float?
-  targetCalories        Float?
-  targetProteinG        Float?
-  targetFatG            Float?
-  targetCarbsG          Float?
-
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
+  id                  String             @id @default(cuid())
+  userId              String             @unique
+  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  age                 Int
+  sex                 Sex
+  heightCm            Float
+  weightKg            Float
+  bodyFatPercentage   Float?
+  state               String?
+  city                String?
+  activityLevel       ActivityLevel
+  exerciseFrequency   Int
+  primaryExerciseType ExerciseType?
+  exerciseDurationMin Int?
+  exerciseIntensity   IntensityLevel?
+  mealsPerDay         Int                @default(3)
+  workRoutine         WorkRoutine
+  dietaryRestrictions DietaryRestriction @default(NONE)
+  weeklyFoodBudget    Float?
+  goal                Goal
+  tdee                Float?
+  targetCalories      Float?
+  targetProteinG      Float?
+  targetFatG          Float?
+  targetCarbsG        Float?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
 
   @@map("user_profiles")
 }
@@ -157,304 +118,63 @@ model OnboardingAnswer {
   question  String
   answer    String
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("onboarding_answers")
 }
 
-// ─────────────────────────────────────────────
-// PERFIL DE SABOR E ROTINA ALIMENTAR
-// ─────────────────────────────────────────────
-
 model TasteProfile {
-  id                        String    @id @default(cuid())
-  userId                    String    @unique
-  user                      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Alimentos que o usuário come com frequência (ex: feijão, arroz, aveia)
-  // Salvo como array de nomes/IDs de alimentos
-  stapleFoods               String    @default("[]")  // JSON string: ["feijao", "arroz", "aveia"]
-
-  // Aversões — alimentos que o usuário recusa comer
-  aversions                 String    @default("[]")  // JSON string: ["figado", "beringela"]
-
-  // Preferências de sabor
-  sweetPreference           Int       @default(3)     // 1-5: quanto gosta de doce
-  saltyPreference           Int       @default(3)     // 1-5: quanto gosta de salgado
-  spicyTolerance            Int       @default(2)     // 1-5: tolerância a picante
-
-  // Preferências culinárias
-  cookingSkill              Int       @default(3)     // 1-5: habilidade na cozinha
-  cookingTime               Int?      // Minutos disponíveis para cozinhar por refeição
-
-  // Alimentos favoritos (prioridade na dieta da IA)
-  favoriteFoods             String    @default("[]")  // JSON string
-
-  createdAt                 DateTime  @default(now())
-  updatedAt                 DateTime  @updatedAt
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stapleFoods     String   @default("[]")
+  aversions       String   @default("[]")
+  sweetPreference Int      @default(3)
+  saltyPreference Int      @default(3)
+  spicyTolerance  Int      @default(2)
+  cookingSkill    Int      @default(3)
+  cookingTime     Int?
+  favoriteFoods   String   @default("[]")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@map("taste_profiles")
 }
 
-// ─────────────────────────────────────────────
-// AJUSTES DE NUTRIENTES (REBALANCEAMENTO)
-// ─────────────────────────────────────────────
-
-model NutrientAdjustment {
-  id            String   @id @default(cuid())
-  userId        String
-  dietId        String
-  nutrient      String   // "iron_MG", "vitaminC_MG", "proteinG", etc.
-  targetChange  Float    // +10 ou -5 (mudança desejada na unidade do nutriente)
-  maxCostDelta  Float?   // Custo máximo adicional que o usuário aceita pagar
-  status        String   @default("PENDING")  // PENDING, APPLIED, REJECTED
-  createdAt     DateTime @default(now())
-
-  // Resultado do rebalanceamento
-  resultCost    Float?   // Novo custo após rebalanceamento
-  resultFoods   String?  // JSON com alterações feitas
-
-  @@map("nutrient_adjustments")
-}
-
-// ─────────────────────────────────────────────
-// ALIMENTOS E NUTRIÇÃO
-// ─────────────────────────────────────────────
-
 model Food {
-  id                String    @id @default(cuid())
-  name              String
-  category          String               // "proteina", "carboidrato", "gordura", "verdura", "fruta", "legume", etc.
-  brand             String?              // Marca (para alimentos industrializados)
-  unit              String    @default("g") // Unidade de medida: g, ml, unidade
-
-  // Nutrientis por 100g/100ml
-  caloriesKcal      Float     // kcal
-  proteinG          Float     // g
-  fatG              Float     // g
-  carbsG            Float     // g
-  fiberG            Float     @default(0)
-  sugarG            Float     @default(0)
-
-  // Vitaminas (por 100g)
-  vitaminA_UG       Float     @default(0) // mcg
-  vitaminC_MG       Float     @default(0) // mg
-  vitaminD_UG       Float     @default(0) // mcg
-  vitaminE_MG       Float     @default(0) // mg
-  vitaminK_UG       Float     @default(0) // mcg
-  vitaminB1_MG      Float     @default(0) // Thiamine
-  vitaminB2_MG      Float     @default(0) // Riboflavin
-  vitaminB3_MG      Float     @default(0) // Niacin
-  vitaminB5_MG      Float     @default(0) // Pantothenic acid
-  vitaminB6_MG      Float     @default(0) // Pyridoxine
-  vitaminB9_UG      Float     @default(0) // Folate
-  vitaminB12_UG     Float     @default(0) // Cobalamin
-
-  // Minerias (por 100g)
-  calcium_MG        Float     @default(0) // mg
-  iron_MG           Float     @default(0) // mg
-  magnesium_MG      Float     @default(0) // mg
-  zinc_MG           Float     @default(0) // mg
-  potassium_MG      Float     @default(0) // mg
-  sodium_MG         Float     @default(0) // mg
-  selenium_UG       Float     @default(0) // mcg
-
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  // Relações
-  prices            FoodPrice[]
-  foodInDiets       FoodInDiet[]
-  mealLogItems      MealLogItem[]
+  id            String   @id @default(cuid())
+  name          String
+  category      String
+  brand         String?
+  unit          String   @default("g")
+  caloriesKcal  Float
+  proteinG      Float
+  fatG          Float
+  carbsG        Float
+  fiberG        Float    @default(0)
+  sugarG        Float    @default(0)
+  vitaminA_UG   Float    @default(0)
+  vitaminC_MG   Float    @default(0)
+  vitaminD_UG   Float    @default(0)
+  vitaminE_MG   Float    @default(0)
+  vitaminK_UG   Float    @default(0)
+  vitaminB1_MG  Float    @default(0)
+  vitaminB2_MG  Float    @default(0)
+  vitaminB3_MG  Float    @default(0)
+  vitaminB5_MG  Float    @default(0)
+  vitaminB6_MG  Float    @default(0)
+  vitaminB9_UG  Float    @default(0)
+  vitaminB12_UG Float    @default(0)
+  calcium_MG    Float    @default(0)
+  iron_MG       Float    @default(0)
+  magnesium_MG  Float    @default(0)
+  zinc_MG       Float    @default(0)
+  potassium_MG  Float    @default(0)
+  sodium_MG     Float    @default(0)
+  selenium_UG   Float    @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@index([category])
   @@map("foods")
-}
-
-model FoodPrice {
-  id              String    @id @default(cuid())
-  foodId          String
-  food            Food      @relation(fields: [foodId], references: [id], onDelete: Cascade)
-  site            String              // Domínio do site onde o preço foi coletado
-  price           Float               // Preço em R$
-  weightG         Float               // Peso/embalagem em gramas
-  pricePerKg      Float               // R$ por kg, calculado
-  collectedAt     DateTime  @default(now())
-
-  @@index([foodId, collectedAt])
-  @@index([site])
-  @@map("food_prices")
-}
-
-// ─────────────────────────────────────────────
-// DIETAS
-// ─────────────────────────────────────────────
-
-enum DietStatus {
-  DRAFT
-  ACTIVE
-  ARCHIVED
-}
-
-enum DietSource {
-  ALGORITHM    // Gerada pelo otimizador de custo (simplex)
-  AI           // Gerada pela NutrIA
-  HYBRID       // Gerada pelo algoritmo, revisada pela IA
-  MANUAL       // Montada manualmente pelo usuário
-}
-
-model Diet {
-  id                String        @id @default(cuid())
-  userId            String
-  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name              String
-  source            DietSource    @default(ALGORITHM)
-  status            DietStatus    @default(DRAFT)
-  totalCalories     Float
-  totalProteinG     Float
-  totalFatG         Float
-  totalCarbsG       Float
-  estimatedCost     Float?        // Custo estimado baseado nos preços coletados
-
-  // Contexto da geração (usado pela IA e pelo algoritmo)
-  context           String?       // JSON: dados do usuário usados para gerar a dieta
-  aiReasoning       String?       // Explicação da IA sobre as escolhas (se gerada por IA)
-
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-
-  foods             FoodInDiet[]
-  adjustments       NutrientAdjustment[]
-  chatReferences    ChatMessage[] // Mensagens de chat que geraram/referenciaram esta dieta
-
-  @@index([userId, status])
-  @@map("diets")
-}
-
-model FoodInDiet {
-  id        String  @id @default(cuid())
-  dietId    String
-  diet      Diet    @relation(fields: [dietId], references: [id], onDelete: Cascade)
-  foodId    String
-  food      Food    @relation(fields: [foodId], references: [id])
-  grams     Float   // Quantidade em gramas desta comida nesta dieta
-  mealSlot  String  // "cafe_manha", "almoco", "lanche", "jantar", etc.
-
-  @@unique([dietId, foodId, mealSlot])
-  @@map("food_in_diets")
-}
-
-// ─────────────────────────────────────────────
-// CHAT COM NUTRiA
-// ─────────────────────────────────────────────
-
-enum ChatRole {
-  USER
-  ASSISTANT
-  SYSTEM
-}
-
-model ChatMessage {
-  id            String        @id @default(cuid())
-  userId        String
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role          ChatRole
-  content       String        // Texto da mensagem
-  relatedDietId String?       // ID da dieta sendo discutida, se aplicável
-  diet          Diet?         @relation(fields: [relatedDietId], references: [id])
-  createdAt     DateTime      @default(now())
-
-  // Metadados opcionais
-  metadata      String?       // JSON: citations, references, tool calls da IA
-
-  @@index([userId, createdAt(desc)])
-  @@index([relatedDietId])
-  @@map("chat_messages")
-}
-
-// ─────────────────────────────────────────────
-// EXAMES DE SANGUE
-// ─────────────────────────────────────────────
-
-model BloodExam {
-  id            String    @id @default(cuid())
-  userId        String
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  collectedAt   DateTime  // Data da coleta do exame
-  lab           String?   // Nome do laboratório
-  notes         String?   // Anotações do usuário
-
-  results       BloodExamResult[]
-  createdAt     DateTime  @default(now())
-
-  @@index([userId, collectedAt(desc)])
-  @@map("blood_exams")
-}
-
-model BloodExamResult {
-  id          String    @id @default(cuid())
-  examId      String
-  exam        BloodExam @relation(fields: [examId], references: [id], onDelete: Cascade)
-  marker      String    // Nome do marcador: "ferritina", "vitamina_d", "hba1c", etc.
-  value       Float     // Valor medido
-  unit        String    // Unidade: "ng/mL", "mg/dL", "UI/L", etc.
-  refMin      Float?    // Referência mínima do laboratório
-  refMax      Float?    // Referência máxima do laboratório
-  status      String?    // "LOW", "NORMAL", "HIGH" — calculado comparando value com refMin/refMax
-  note        String?   // Observação adicional
-
-  @@map("blood_exam_results")
-}
-
-// ─────────────────────────────────────────────
-// TRACKING
-// ─────────────────────────────────────────────
-
-model BodyRecord {
-  id                  String   @id @default(cuid())
-  userId              String
-  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  weightKg            Float
-  bodyFatPercentage   Float?
-  recordedAt          DateTime @default(now())
-
-  @@index([userId, recordedAt])
-  @@map("body_records")
-}
-
-model ExerciseLog {
-  id          String          @id @default(cuid())
-  userId      String
-  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type        ExerciseType
-  durationMin Int             // Duração em minutos
-  intensity   IntensityLevel
-  notes       String?         // Anotações livres
-  loggedAt    DateTime        @default(now())
-
-  @@index([userId, loggedAt])
-  @@map("exercise_logs")
-}
-
-model MealLog {
-  id        String          @id @default(cuid())
-  userId    String
-  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date      DateTime        @default(now()) // Data da refeição
-  mealSlot  String          // "cafe_manha", "almoco", "lanche", "jantar"
-
-  items     MealLogItem[]
-
-  @@index([userId, date])
-  @@map("meal_logs")
-}
-
-model MealLogItem {
-  id        String    @id @default(cuid())
-  mealLogId String
-  mealLog   MealLog   @relation(fields: [mealLogId], references: [id], onDelete: Cascade)
-  foodId    String
-  food      Food      @relation(fields: [foodId], references: [id])
-  grams     Float     // Quantidade consumida em gramas
-
-  @@map("meal_log_items")
 }

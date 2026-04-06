@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-background-elevated: hsl(var(--background-elevated));
+  --color-background-subtle: hsl(var(--background-subtle));
+  --color-foreground: hsl(var(--foreground));
+  --color-foreground-muted: hsl(var(--foreground-muted));
+  --color-border: hsl(var(--border));
+  --color-accent: hsl(var(--accent));
+  --color-accent-hover: hsl(var(--accent-hover));
+  --color-accent-muted: hsl(var(--accent-muted));
+  --color-ai-accent: hsl(var(--ai-accent));
+  --color-ai-accent-muted: hsl(var(--ai-accent-muted));
+  --color-success: hsl(var(--success));
+  --color-warning: hsl(var(--warning));
+  --color-error: hsl(var(--error));
+  --color-info: hsl(var(--info));
+}
+
+:root {
+  --background: 0 0% 7%;
+  --background-elevated: 0 0% 11%;
+  --background-subtle: 0 0% 14%;
+  --foreground: 0 0% 95%;
+  --foreground-muted: 0 0% 55%;
+  --foreground-inverse: 0 0% 10%;
+  --border: 0 0% 20%;
+  --accent: 142 70% 45%;
+  --accent-hover: 142 70% 50%;
+  --accent-muted: 142 40% 15%;
+  --ai-accent: 260 60% 55%;
+  --ai-accent-muted: 260 30% 15%;
+  --success: 145 63% 42%;
+  --warning: 45 93% 50%;
+  --error: 0 84% 60%;
+  --info: 210 80% 56%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+body {
+  min-height: 100vh;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+.font-data {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+select {
+  appearance: none;
+}
