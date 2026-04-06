@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --no-turbopack)",
+      "Bash(npx create-next-app@latest tmp-scaffold --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --no-turbopack)",
+      "Bash(cp -r tmp-scaffold/src/ ./)",
+      "Bash(cp tmp-scaffold/package.json ./)",
+      "Bash(cp tmp-scaffold/package-lock.json ./)",
+      "Bash(cp tmp-scaffold/next.config.ts ./)",
+      "Bash(cp tmp-scaffold/tsconfig.json ./)",
+      "Bash(npm install:*)",
+      "Bash(cd:*)",
+      "Bash(openssl rand:*)",
+      "Bash(return)",
+      "Bash(ls:*)"
+    ]
+  }
+}
