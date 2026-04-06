@@ -18,6 +18,7 @@ const STEPS = [
 type FormData = {
 	age: string;
 	sex: string;
+	country: string;
 	heightCm: string;
 	weightKg: string;
 	bodyFatPercentage: string;
@@ -40,6 +41,7 @@ type FormData = {
 const initialData: FormData = {
 	age: "",
 	sex: "",
+	country: "",
 	heightCm: "",
 	weightKg: "",
 	bodyFatPercentage: "",
@@ -100,6 +102,7 @@ export default function OnboardingPage() {
 					userId: session.user.id,
 					age: parseInt(data.age),
 					sex: data.sex,
+					country: data.country || undefined,
 					heightCm: parseFloat(data.heightCm),
 					weightKg: parseFloat(data.weightKg),
 					bodyFatPercentage: data.bodyFatPercentage
@@ -268,46 +271,58 @@ function StepDadosPessoais({
 			<h2 className="text-xl font-bold">Dados Pessoais</h2>
 
 			<div className="flex flex-col gap-1.5">
-				<label className="text-sm font-medium">Idade</label>
-				<input
-					type="number"
-					value={data.age}
-					onChange={(e) => update("age", e.target.value)}
-					className="h-11 bg-background-subtle border border-border rounded-sm px-3 text-sm placeholder:text-foreground-muted focus:border-accent transition-colors"
-					placeholder="25"
-					min={12}
-					max={100}
-				/>
-			</div>
+			<label className="text-sm font-medium">Idade</label>
+			<input
+				type="number"
+				value={data.age}
+				onChange={(e) => update("age", e.target.value)}
+				className="h-11 bg-background-subtle border border-border rounded-sm px-3 text-sm placeholder:text-foreground-muted focus:border-accent transition-colors"
+				placeholder="25"
+				min={12}
+				max={100}
+			/>
+		</div>
 
-			<div className="flex flex-col gap-1.5">
-				<label className="text-sm font-medium">Sexo biológico</label>
-				<div className="grid grid-cols-2 gap-3">
-					{(
-						[
-							{ val: "MALE", label: "Masculino" },
-							{ val: "FEMALE", label: "Feminino" },
-						] as const
-					).map((item) => (
-						<button
-							key={item.val}
-							type="button"
-							onClick={() => update("sex", item.val)}
-							className={cn(
-								"h-11 rounded-sm text-sm font-medium border transition-colors min-h-[44px]",
-								data.sex === item.val
-									? "bg-accent text-foreground-inverse border-accent"
-									: "bg-background-subtle text-foreground-muted border-border hover:border-accent"
-							)}
-						>
-							{item.label}
-						</button>
-					))}
-				</div>
+		<div className="flex flex-col gap-1.5">
+			<label className="text-sm font-medium">Sexo biológico</label>
+			<div className="grid grid-cols-2 gap-3">
+				{(
+					[
+						{ val: "MALE", label: "Masculino" },
+						{ val: "FEMALE", label: "Feminino" },
+					] as const
+				).map((item) => (
+					<button
+						key={item.val}
+						type="button"
+						onClick={() => update("sex", item.val)}
+						className={cn(
+							"h-11 rounded-sm text-sm font-medium border transition-colors min-h-[44px]",
+							data.sex === item.val
+								? "bg-accent text-foreground-inverse border-accent"
+								: "bg-background-subtle text-foreground-muted border-border hover:border-accent"
+						)}
+					>
+						{item.label}
+					</button>
+				))}
 			</div>
+		</div>
 
-			<div className="flex flex-col gap-1.5">
-				<label className="text-sm font-medium">Estado (UF)</label>
+		<div className="flex flex-col gap-1.5">
+			<label className="text-sm font-medium">País</label>
+			<input
+				type="text"
+				value={data.country}
+				onChange={(e) => update("country", e.target.value.toUpperCase())}
+				className="h-11 bg-background-subtle border border-border rounded-sm px-3 text-sm placeholder:text-foreground-muted focus:border-accent transition-colors"
+				placeholder="BR"
+				maxLength={3}
+			/>
+		</div>
+
+		<div className="flex flex-col gap-1.5">
+			<label className="text-sm font-medium">Estado (UF)</label>
 				<input
 					type="text"
 					value={data.state}
@@ -402,11 +417,11 @@ function StepExercicio({
 				<div className="flex flex-col gap-2">
 					{(
 						[
-							{ val: "SEDENTARY", label: "Sedentário" },
-							{ val: "LIGHT", label: "Leve" },
-							{ val: "MODERATE", label: "Moderado" },
-							{ val: "ACTIVE", label: "Ativo" },
-							{ val: "VERY_ACTIVE", label: "Muito Ativo" },
+							{ val: "SEDENTARY", label: "Sedentário", desc: "Trabalho de escritório, sem exercício regular" },
+							{ val: "LIGHT", label: "Leve", desc: "Exercício leve 1-3x/semana" },
+							{ val: "MODERATE", label: "Moderado", desc: "Exercício moderado 3-5x/semana" },
+							{ val: "ACTIVE", label: "Ativo", desc: "Exercício intenso 6-7x/semana" },
+							{ val: "VERY_ACTIVE", label: "Muito Ativo", desc: "Atleta ou treina 2x por dia" },
 						] as const
 					).map((item) => (
 						<button
@@ -414,13 +429,14 @@ function StepExercicio({
 							type="button"
 							onClick={() => update("activityLevel", item.val)}
 							className={cn(
-								"h-11 rounded-sm text-sm font-medium border text-left px-4 transition-colors min-h-[44px]",
+								"rounded-sm text-sm font-medium border text-left px-4 py-3 transition-colors min-h-[44px]",
 								data.activityLevel === item.val
 									? "bg-accent text-foreground-inverse border-accent"
 									: "bg-background-subtle text-foreground-muted border-border hover:border-accent"
 							)}
 						>
-							{item.label}
+							<span className="block font-semibold">{item.label}</span>
+							<span className="block text-xs opacity-70 mt-0.5">{item.desc}</span>
 						</button>
 					))}
 				</div>

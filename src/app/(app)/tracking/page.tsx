@@ -118,6 +118,7 @@ function ExerciseForm({ userId }: { userId: string }) {
 	const [type, setType] = useState("");
 	const [duration, setDuration] = useState("");
 	const [intensity, setIntensity] = useState("MODERATE");
+	const [calories, setCalories] = useState("");
 	const [success, setSuccess] = useState(false);
 
 	async function handleSubmit(e: React.FormEvent) {
@@ -132,6 +133,7 @@ function ExerciseForm({ userId }: { userId: string }) {
 				type,
 				durationMin: parseInt(duration),
 				intensity,
+				caloriesBurned: calories ? parseInt(calories) : undefined,
 			}),
 		});
 
@@ -139,6 +141,7 @@ function ExerciseForm({ userId }: { userId: string }) {
 			setSuccess(true);
 			setType("");
 			setDuration("");
+			setCalories("");
 		}
 	}
 
@@ -206,6 +209,20 @@ function ExerciseForm({ userId }: { userId: string }) {
 						</button>
 					))}
 				</div>
+			</div>
+
+			<div className="flex flex-col gap-1.5">
+				<label className="text-sm font-medium">
+					Calorias gastas <span className="text-foreground-muted">(opcional)</span>
+				</label>
+				<input
+					type="number"
+					value={calories}
+					onChange={(e) => setCalories(e.target.value)}
+					className="h-11 bg-background-subtle border border-border rounded-sm px-3 text-sm placeholder:text-foreground-muted focus:border-accent transition-colors"
+					placeholder="250"
+					min={0}
+				/>
 			</div>
 
 			<button

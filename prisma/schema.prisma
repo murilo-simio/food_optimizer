@@ -118,8 +118,9 @@ model UserProfile {
   bodyFatPercentage Float? // Pode ser nulo no início
 
   // Localização geográfica
-  state String? // UF para considerar alimentos regionais e preços
-  city  String?
+  country  String? // BR, US, etc.
+  state    String? // UF para considerar alimentos regionais e preços
+  city     String?
 
   // Exercício
   activityLevel       ActivityLevel

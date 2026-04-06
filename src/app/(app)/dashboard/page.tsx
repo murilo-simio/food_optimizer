@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
@@ -9,8 +10,23 @@ import { cn } from "@/lib/utils";
 export default function DashboardPage() {
 	const { data: session, status } = useSession();
 	const router = useRouter();
+	const [onboardingComplete, setOnboardingComplete] = useState(false);
 
-	if (status === "loading") {
+	useEffect(() => {
+		if (status === "loading" || !session?.user?.id) return;
+		fetch(`/api/profile?userId=${session.user.id}`)
+			.then((res) => res.json())
+			.then((data) => {
+				if (!data.onboardingComplete) {
+					router.push("/onboarding");
+				} else {
+					setOnboardingComplete(true);
+				}
+			})
+			.catch(() => setOnboardingComplete(false));
+	}, [session, status, router]);
+
+	if (status === "loading" || !session) {
 		return (
 			<div className="flex items-center justify-center min-h-screen">
 				<div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
@@ -23,9 +39,10 @@ export default function DashboardPage() {
 		return null;
 	}
 
+	if (!onboardingComplete) return null;
+
 	return (
 		<div className="px-4 py-4 max-w-2xl mx-auto">
-			{/* Header */}
 			<header className="flex items-center justify-between mb-6">
 				<div>
 					<h1 className="text-xl font-bold">
@@ -44,35 +61,13 @@ export default function DashboardPage() {
 				</button>
 			</header>
 
-			{/* Stats cards */}
 			<div className="grid grid-cols-2 gap-4 mb-6">
-				<StatCard
-					label="Calorias"
-					value="—"
-					unit="kcal"
-					status="empty"
-				/>
-				<StatCard
-					label="Proteína"
-					value="—"
-					unit="g"
-					status="empty"
-				/>
-				<StatCard
-					label="Carbos"
-					value="—"
-					unit="g"
-					status="empty"
-				/>
-				<StatCard
-					label="Gordura"
-					value="—"
-					unit="g"
-					status="empty"
-				/>
+				<StatCard label="Calorias" value="—" unit="kcal" status="empty" />
+				<StatCard label="Proteína" value="—" unit="g" status="empty" />
+				<StatCard label="Carbos" value="—" unit="g" status="empty" />
+				<StatCard label="Gordura" value="—" unit="g" status="empty" />
 			</div>
 
-			{/* Empty state */}
 			<div className="bg-background-elevated border border-border rounded-md p-6 text-center">
 				<p className="text-foreground-muted text-sm">
 					Nenhuma dieta montada ainda.

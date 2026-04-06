@@ -9,14 +9,35 @@ export default function AuthPage() {
 	const router = useRouter();
 
 	useEffect(() => {
-		if (status === "loading") return;
-
-		if (session) {
-			router.push("/onboarding");
-		} else {
-			router.push("/login");
+		if (status !== "loading" && session?.user?.id) {
+			fetch(`/api/profile?userId=${session.user.id}`)
+				.then((res) => res.json())
+				.then((data) => {
+					if (data.onboardingComplete) {
+						router.push("/dashboard");
+					} else {
+						router.push("/onboarding");
+					}
+				})
+				.catch(() => router.push("/onboarding"));
 		}
 	}, [session, status, router]);
+
+	if (status === "loading") {
+		return (
+			<div className="flex items-center justify-center min-h-screen">
+				<div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+			</div>
+		);
+	}
+
+	if (!session) {
+		return (
+			<div className="flex items-center justify-center min-h-screen">
+				<div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+			</div>
+		);
+	}
 
 	return null;
 }

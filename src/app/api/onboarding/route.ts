@@ -6,6 +6,7 @@ const profileSchema = z.object({
 	userId: z.string(),
 	age: z.number().min(12).max(100),
 	sex: z.enum(["MALE", "FEMALE"]),
+	country: z.string().max(3).optional(),
 	heightCm: z.number().positive(),
 	weightKg: z.number().positive(),
 	bodyFatPercentage: z.number().min(1).max(70).optional(),
