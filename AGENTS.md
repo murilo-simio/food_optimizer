@@ -66,11 +66,29 @@ interface UserInput {
 - **Prod futura:** Supabase (PostgreSQL). Escreva queries compatíveis com PostgreSQL desde o início. Evite funções específicas de SQLite.
 - Seeds em `prisma/seed.ts` para dados de referência (tabela nutricional de alimentos).
 
+## Integração com IA (OpenRouter)
+
+- Use `OPENROUTER_API_KEY` e `OPENROUTER_MODEL` do `.env`.
+- Modelo default: o mais capaz disponível no momento (consultar leaderboard).
+- **Streaming** é obrigatório — respostas da IA devem usar `ReadableStream` do Next.js.
+- System prompts devem incluir: perfil do usuário, dieta atual, tracking, preços, exames (ver template em `NUTRITIONIST_IA.md`).
+- **Nunca** enviar dados sensíveis (senha, tokens) à API.
+- **Fallback:** se a IA falhar, o montador algorítmico (simplex) assume.
+- **Rate limits:** implemente debounce/throttle no frontend para não spammar chamadas.
+- Log de custos de API (tokens input/output) em env local para monitorar gastos.
+
+## Chat com IA
+
+- Mensagens devem ser salvas no banco (`ChatMessage`).
+- Mensagens do sistema (`role: SYSTEM`) não são renderizadas para o usuário — são contexto.
+- Dieta gerada pelo chat deve ser linkada via `relatedDietId`.
+- Cards inline no chat (dietas, análises) usam estilo com borda `--ai-accent`.
+
 ## Scraping
 
 - Scrapers devem ser **idempotentes**: rodar múltiplas vezes sem duplicar dados.
 - Use `upsert` para salvar preços coletados.
-- timeouts e retries em todas as chamadas de rede.
+- Timeouts e retries em todas as chamadas de rede.
 - **Respeite robots.txt** dos sites alvo.
 - User-Agent identificável com contato do projeto.
 
@@ -92,3 +110,11 @@ interface UserInput {
 - Para lógica de negócio (cálculos nutricionais, otimizador): unit tests.
 - Para UI: testes focam em comportamento interacional, não em snapshots.
 - Scraper tests: mock de HTTP, nunca chamar URLs reais em CI.
+- IA: mock de chamadas OpenRouter — nunca gastar créditos de API em testes.
+
+## Documentos de Referência
+
+- `AGENTS.md` — boas práticas de código (este arquivo)
+- `NUTRITIONIST_IA.md` — diretrizes da IA nutricionista (comportamento, tom, guardrails)
+- `DESIGN_SYSTEM.md` — padrão visual e componentes
+- `PROJECT_SPEC.md` — especificação completa do projeto

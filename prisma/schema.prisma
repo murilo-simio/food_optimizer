@@ -27,6 +27,7 @@ model User {
 
   // Perfil e questionário
   profile           UserProfile?
+  tasteProfile      TasteProfile?
   onboardingAnswers OnboardingAnswer[]
 
   // Tracking
@@ -34,6 +35,10 @@ model User {
   exerciseLogs      ExerciseLog[]
   mealLogs          MealLog[]
   diets             Diet[]
+  bloodExams        BloodExam[]
+
+  // IA
+  chatMessages      ChatMessage[]
 
   @@map("users")
 }
@@ -112,6 +117,10 @@ model UserProfile {
   weightKg              Float
   bodyFatPercentage     Float?              // Pode ser nulo no início
 
+  // Localização geográfica
+  state                 String?              // UF para considerar alimentos regionais e preços
+  city                  String?
+
   // Exercício
   activityLevel         ActivityLevel
   exerciseFrequency     Int                 // Dias por semana
@@ -150,6 +159,61 @@ model OnboardingAnswer {
   createdAt DateTime @default(now())
 
   @@map("onboarding_answers")
+}
+
+// ─────────────────────────────────────────────
+// PERFIL DE SABOR E ROTINA ALIMENTAR
+// ─────────────────────────────────────────────
+
+model TasteProfile {
+  id                        String    @id @default(cuid())
+  userId                    String    @unique
+  user                      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Alimentos que o usuário come com frequência (ex: feijão, arroz, aveia)
+  // Salvo como array de nomes/IDs de alimentos
+  stapleFoods               String    @default("[]")  // JSON string: ["feijao", "arroz", "aveia"]
+
+  // Aversões — alimentos que o usuário recusa comer
+  aversions                 String    @default("[]")  // JSON string: ["figado", "beringela"]
+
+  // Preferências de sabor
+  sweetPreference           Int       @default(3)     // 1-5: quanto gosta de doce
+  saltyPreference           Int       @default(3)     // 1-5: quanto gosta de salgado
+  spicyTolerance            Int       @default(2)     // 1-5: tolerância a picante
+
+  // Preferências culinárias
+  cookingSkill              Int       @default(3)     // 1-5: habilidade na cozinha
+  cookingTime               Int?      // Minutos disponíveis para cozinhar por refeição
+
+  // Alimentos favoritos (prioridade na dieta da IA)
+  favoriteFoods             String    @default("[]")  // JSON string
+
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  @@map("taste_profiles")
+}
+
+// ─────────────────────────────────────────────
+// AJUSTES DE NUTRIENTES (REBALANCEAMENTO)
+// ─────────────────────────────────────────────
+
+model NutrientAdjustment {
+  id            String   @id @default(cuid())
+  userId        String
+  dietId        String
+  nutrient      String   // "iron_MG", "vitaminC_MG", "proteinG", etc.
+  targetChange  Float    // +10 ou -5 (mudança desejada na unidade do nutriente)
+  maxCostDelta  Float?   // Custo máximo adicional que o usuário aceita pagar
+  status        String   @default("PENDING")  // PENDING, APPLIED, REJECTED
+  createdAt     DateTime @default(now())
+
+  // Resultado do rebalanceamento
+  resultCost    Float?   // Novo custo após rebalanceamento
+  resultFoods   String?  // JSON com alterações feitas
+
+  @@map("nutrient_adjustments")
 }
 
 // ─────────────────────────────────────────────
@@ -231,11 +295,19 @@ enum DietStatus {
   ARCHIVED
 }
 
+enum DietSource {
+  ALGORITHM    // Gerada pelo otimizador de custo (simplex)
+  AI           // Gerada pela NutrIA
+  HYBRID       // Gerada pelo algoritmo, revisada pela IA
+  MANUAL       // Montada manualmente pelo usuário
+}
+
 model Diet {
   id                String        @id @default(cuid())
   userId            String
   user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   name              String
+  source            DietSource    @default(ALGORITHM)
   status            DietStatus    @default(DRAFT)
   totalCalories     Float
   totalProteinG     Float
@@ -243,10 +315,16 @@ model Diet {
   totalCarbsG       Float
   estimatedCost     Float?        // Custo estimado baseado nos preços coletados
 
+  // Contexto da geração (usado pela IA e pelo algoritmo)
+  context           String?       // JSON: dados do usuário usados para gerar a dieta
+  aiReasoning       String?       // Explicação da IA sobre as escolhas (se gerada por IA)
+
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
   foods             FoodInDiet[]
+  adjustments       NutrientAdjustment[]
+  chatReferences    ChatMessage[] // Mensagens de chat que geraram/referenciaram esta dieta
 
   @@index([userId, status])
   @@map("diets")
@@ -263,6 +341,68 @@ model FoodInDiet {
 
   @@unique([dietId, foodId, mealSlot])
   @@map("food_in_diets")
+}
+
+// ─────────────────────────────────────────────
+// CHAT COM NUTRiA
+// ─────────────────────────────────────────────
+
+enum ChatRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+model ChatMessage {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role          ChatRole
+  content       String        // Texto da mensagem
+  relatedDietId String?       // ID da dieta sendo discutida, se aplicável
+  diet          Diet?         @relation(fields: [relatedDietId], references: [id])
+  createdAt     DateTime      @default(now())
+
+  // Metadados opcionais
+  metadata      String?       // JSON: citations, references, tool calls da IA
+
+  @@index([userId, createdAt(desc)])
+  @@index([relatedDietId])
+  @@map("chat_messages")
+}
+
+// ─────────────────────────────────────────────
+// EXAMES DE SANGUE
+// ─────────────────────────────────────────────
+
+model BloodExam {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collectedAt   DateTime  // Data da coleta do exame
+  lab           String?   // Nome do laboratório
+  notes         String?   // Anotações do usuário
+
+  results       BloodExamResult[]
+  createdAt     DateTime  @default(now())
+
+  @@index([userId, collectedAt(desc)])
+  @@map("blood_exams")
+}
+
+model BloodExamResult {
+  id          String    @id @default(cuid())
+  examId      String
+  exam        BloodExam @relation(fields: [examId], references: [id], onDelete: Cascade)
+  marker      String    // Nome do marcador: "ferritina", "vitamina_d", "hba1c", etc.
+  value       Float     // Valor medido
+  unit        String    // Unidade: "ng/mL", "mg/dL", "UI/L", etc.
+  refMin      Float?    // Referência mínima do laboratório
+  refMax      Float?    // Referência máxima do laboratório
+  status      String?    // "LOW", "NORMAL", "HIGH" — calculado comparando value com refMin/refMax
+  note        String?   // Observação adicional
+
+  @@map("blood_exam_results")
 }
 
 // ─────────────────────────────────────────────
