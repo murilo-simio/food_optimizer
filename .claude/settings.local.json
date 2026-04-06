@@ -12,7 +12,8 @@
       "Bash(cd:*)",
       "Bash(openssl rand:*)",
       "Bash(return)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(npx prisma:*)"
     ]
   }
 }

@@ -423,14 +423,15 @@ model BodyRecord {
 }
 
 model ExerciseLog {
-  id          String         @id @default(cuid())
-  userId      String
-  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type        ExerciseType
-  durationMin Int // Duração em minutos
-  intensity   IntensityLevel
-  notes       String? // Anotações livres
-  loggedAt    DateTime       @default(now())
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type             ExerciseType
+  durationMin      Int      // Duração em minutos
+  intensity        IntensityLevel
+  caloriesBurned   Int?     // Calorias gastas (vindo de relógio/app)
+  notes            String?  // Anotações livres
+  loggedAt         DateTime @default(now())
 
   @@index([userId, loggedAt])
   @@map("exercise_logs")

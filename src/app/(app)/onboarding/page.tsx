@@ -17,22 +17,22 @@ const STEPS = [
 
 type FormData = {
 	age: string;
-	sex: "";
+	sex: string;
 	heightCm: string;
 	weightKg: string;
 	bodyFatPercentage: string;
-	activityLevel: "";
+	activityLevel: string;
 	exerciseFrequency: string;
-	primaryExerciseType: "";
+	primaryExerciseType: string;
 	exerciseDurationMin: string;
-	exerciseIntensity: "";
+	exerciseIntensity: string;
 	mealsPerDay: string;
-	workRoutine: "";
-	dietaryRestrictions: "";
+	workRoutine: string;
+	dietaryRestrictions: string;
 	weeklyFoodBudget: string;
 	state: string;
 	city: string;
-	goal: "";
+	goal: string;
 	stapleFoods: string;
 	aversions: string;
 };
@@ -80,7 +80,7 @@ export default function OnboardingPage() {
 			case 3:
 				return data.workRoutine;
 			case 4:
-				return true; // sabor is all optional
+				return true;
 			case 5:
 				return data.goal !== "";
 			default:
@@ -93,7 +93,6 @@ export default function OnboardingPage() {
 		setSaving(true);
 
 		try {
-			// Save profile
 			const profileRes = await fetch("/api/onboarding", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
@@ -134,7 +133,6 @@ export default function OnboardingPage() {
 				return;
 			}
 
-			// Save taste profile
 			const tasteRes = await fetch("/api/onboarding/taste", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
@@ -162,7 +160,6 @@ export default function OnboardingPage() {
 				return;
 			}
 
-			// Save onboarding complete marker
 			await fetch("/api/onboarding/complete", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
@@ -179,9 +176,10 @@ export default function OnboardingPage() {
 		setSaving(false);
 	};
 
+	const nextDisabled = step < STEPS.length - 1 && !canProceed();
+
 	return (
 		<div className="min-h-screen bg-background flex flex-col">
-			{/* Progress bar */}
 			<div className="px-4 pt-4">
 				<div className="flex gap-1 mb-2">
 					{STEPS.map((s, i) => (
@@ -199,24 +197,21 @@ export default function OnboardingPage() {
 				</p>
 			</div>
 
-			{/* Step content */}
 			<div className="flex-1 px-4 py-6 max-w-lg mx-auto w-full">
 				{step === 0 && (
 					<StepDadosPessoais data={data} update={updateField} />
 				)}
 				{step === 1 && <StepCorpo data={data} update={updateField} />}
-				{step === 2 && (
-					StepExercicio({ data, update: updateField })
-				)}
+				{step === 2 && <StepExercicio data={data} update={updateField} />}
 				{step === 3 && <StepHabitos data={data} update={updateField} />}
 				{step === 4 && <StepSabor data={data} update={updateField} />}
 				{step === 5 && <StepObjetivo data={data} update={updateField} />}
 			</div>
 
-			{/* Nav buttons */}
 			<div className="px-4 py-4 border-t border-border flex gap-3 max-w-lg mx-auto w-full">
 				{step > 0 && (
 					<button
+						type="button"
 						onClick={() => setStep((s) => s - 1)}
 						className="flex-1 border border-border bg-background-elevated text-foreground font-medium rounded-sm px-4 py-2 text-sm hover:bg-background-subtle transition-colors min-h-[44px]"
 					>
@@ -225,14 +220,16 @@ export default function OnboardingPage() {
 				)}
 				{step < STEPS.length - 1 ? (
 					<button
+						type="button"
 						onClick={() => setStep((s) => s + 1)}
-						disabled={!canProceed()}
+						disabled={nextDisabled}
 						className="flex-1 bg-accent text-foreground-inverse font-medium rounded-sm px-4 py-2 text-sm hover:brightness-110 transition-colors min-h-[44px] disabled:opacity-50"
 					>
 						Próximo
 					</button>
 				) : (
 					<button
+						type="button"
 						onClick={handleSubmit}
 						disabled={!canProceed() || saving}
 						className="flex-1 bg-accent text-foreground-inverse font-medium rounded-sm px-4 py-2 text-sm hover:brightness-110 transition-colors min-h-[44px] disabled:opacity-50 flex items-center justify-center gap-2"
@@ -243,6 +240,19 @@ export default function OnboardingPage() {
 				)}
 			</div>
 		</div>
+	);
+}
+
+function StepLabel({ value, label }: { value: string; label: string }) {
+	return (
+		<span
+			className={cn(
+				"h-11 rounded-sm text-sm font-medium border transition-colors min-h-[44px]",
+				value ? "bg-accent text-foreground-inverse border-accent" : "bg-background-subtle text-foreground-muted border-border hover:border-accent"
+			)}
+		>
+			{label}
+		</span>
 	);
 }
 
@@ -273,18 +283,24 @@ function StepDadosPessoais({
 			<div className="flex flex-col gap-1.5">
 				<label className="text-sm font-medium">Sexo biológico</label>
 				<div className="grid grid-cols-2 gap-3">
-					{(["MALE", "FEMALE"] as const).map((val) => (
+					{(
+						[
+							{ val: "MALE", label: "Masculino" },
+							{ val: "FEMALE", label: "Feminino" },
+						] as const
+					).map((item) => (
 						<button
-							key={val}
-							onClick={() => update("sex", val)}
+							key={item.val}
+							type="button"
+							onClick={() => update("sex", item.val)}
 							className={cn(
 								"h-11 rounded-sm text-sm font-medium border transition-colors min-h-[44px]",
-								data.sex === val
+								data.sex === item.val
 									? "bg-accent text-foreground-inverse border-accent"
 									: "bg-background-subtle text-foreground-muted border-border hover:border-accent"
 							)}
 						>
-							{val === "MALE" ? "Masculino" : "Feminino"}
+							{item.label}
 						</button>
 					))}
 				</div>
@@ -295,7 +311,7 @@ function StepDadosPessoais({
 				<input
 					type="text"
 					value={data.state}
-					onChange={(e) => update("state", e.target.value)}
+					onChange={(e) => update("state", e.target.value.toUpperCase())}
 					className="h-11 bg-background-subtle border border-border rounded-sm px-3 text-sm placeholder:text-foreground-muted focus:border-accent transition-colors"
 					placeholder="SP"
 					maxLength={2}
@@ -352,14 +368,13 @@ function StepCorpo({
 
 			<div className="flex flex-col gap-1.5">
 				<label className="text-sm font-medium">
-					% Gordura <span className="text-foreground-muted">(opcional)</span>
+					% Gordura{" "}
+					<span className="text-foreground-muted">(opcional)</span>
 				</label>
 				<input
 					type="number"
 					value={data.bodyFatPercentage}
-					onChange={(e) =>
-						update("bodyFatPercentage", e.target.value)
-					}
+					onChange={(e) => update("bodyFatPercentage", e.target.value)}
 					className="h-11 bg-background-subtle border border-border rounded-sm px-3 text-sm placeholder:text-foreground-muted focus:border-accent transition-colors"
 					placeholder="18"
 					min={3}
@@ -383,19 +398,20 @@ function StepExercicio({
 			<h2 className="text-xl font-bold">Exercício Físico</h2>
 
 			<div className="flex flex-col gap-1.5">
-				<label className="text-sm font-medium">
-					Nível de atividade
-				</label>
+				<label className="text-sm font-medium">Nível de atividade</label>
 				<div className="flex flex-col gap-2">
-					{([
-						{ val: "SEDENTARY", label: "Sedentário" },
-						{ val: "LIGHT", label: "Leve" },
-						{ val: "MODERATE", label: "Moderado" },
-						{ val: "ACTIVE", label: "Ativo" },
-						{ val: "VERY_ACTIVE", label: "Muito Ativo" },
-					] as const).map((item) => (
+					{(
+						[
+							{ val: "SEDENTARY", label: "Sedentário" },
+							{ val: "LIGHT", label: "Leve" },
+							{ val: "MODERATE", label: "Moderado" },
+							{ val: "ACTIVE", label: "Ativo" },
+							{ val: "VERY_ACTIVE", label: "Muito Ativo" },
+						] as const
+					).map((item) => (
 						<button
 							key={item.val}
+							type="button"
 							onClick={() => update("activityLevel", item.val)}
 							className={cn(
 								"h-11 rounded-sm text-sm font-medium border text-left px-4 transition-colors min-h-[44px]",
@@ -417,9 +433,7 @@ function StepExercicio({
 				<input
 					type="number"
 					value={data.exerciseFrequency}
-					onChange={(e) =>
-						update("exerciseFrequency", e.target.value)
-					}
+					onChange={(e) => update("exerciseFrequency", e.target.value)}
 					className="h-11 bg-background-subtle border border-border rounded-sm px-3 text-sm placeholder:text-foreground-muted focus:border-accent transition-colors"
 					placeholder="4"
 					min={0}
@@ -435,9 +449,7 @@ function StepExercicio({
 				<input
 					type="number"
 					value={data.exerciseDurationMin}
-					onChange={(e) =>
-						update("exerciseDurationMin", e.target.value)
-					}
+					onChange={(e) => update("exerciseDurationMin", e.target.value)}
 					className="h-11 bg-background-subtle border border-border rounded-sm px-3 text-sm placeholder:text-foreground-muted focus:border-accent transition-colors"
 					placeholder="60"
 				/>
@@ -446,22 +458,25 @@ function StepExercicio({
 			<div className="flex flex-col gap-1.5">
 				<label className="text-sm font-medium">Intensidade</label>
 				<div className="grid grid-cols-3 gap-2">
-					{(["LIGHT", "MODERATE", "INTENSE"] as const).map((val) => (
+					{(
+						[
+							{ val: "LIGHT", label: "Leve" },
+							{ val: "MODERATE", label: "Moderada" },
+							{ val: "INTENSE", label: "Intensa" },
+						] as const
+					).map((item) => (
 						<button
-							key={val}
-							onClick={() => update("exerciseIntensity", val)}
+							key={item.val}
+							type="button"
+							onClick={() => update("exerciseIntensity", item.val)}
 							className={cn(
 								"h-11 rounded-sm text-sm font-medium border transition-colors min-h-[44px]",
-								data.exerciseIntensity === val
+								data.exerciseIntensity === item.val
 									? "bg-accent text-foreground-inverse border-accent"
 									: "bg-background-subtle text-foreground-muted border-border hover:border-accent"
 							)}
 						>
-							{val === "LIGHT"
-								? "Leve"
-								: val === "MODERATE"
-								? "Moderada"
-								: "Intensa"}
+							{item.label}
 						</button>
 					))}
 				</div>
@@ -482,13 +497,12 @@ function StepHabitos({
 			<h2 className="text-xl font-bold">Hábitos e Rotina</h2>
 
 			<div className="flex flex-col gap-1.5">
-				<label className="text-sm font-medium">
-					Refeições por dia
-				</label>
+				<label className="text-sm font-medium">Refeições por dia</label>
 				<div className="grid grid-cols-4 gap-2">
 					{["2", "3", "4", "5"].map((val) => (
 						<button
 							key={val}
+							type="button"
 							onClick={() => update("mealsPerDay", val)}
 							className={cn(
 								"h-11 rounded-sm text-sm font-medium border transition-colors min-h-[44px]",
@@ -504,18 +518,23 @@ function StepHabitos({
 			</div>
 
 			<div className="flex flex-col gap-1.5">
-				<label className="text-sm font-medium">Rotina de trabalho</label>
+				<label className="text-sm font-medium">
+					Rotina de trabalho
+				</label>
 				<div className="flex flex-col gap-2">
-					{([
-						{ val: "CLT_9_TO_5", label: "CLT (9h-18h)" },
-						{ val: "HOME_OFFICE", label: "Home Office" },
-						{ val: "SHIFT_WORK", label: "Turnos" },
-						{ val: "FLEXIBLE", label: "Horário flexível" },
-						{ val: "STUDENT", label: "Estudante" },
-						{ val: "OTHER", label: "Outro" },
-					] as const).map((item) => (
+					{(
+						[
+							{ val: "CLT_9_TO_5", label: "CLT (9h-18h)" },
+							{ val: "HOME_OFFICE", label: "Home Office" },
+							{ val: "SHIFT_WORK", label: "Turnos" },
+							{ val: "FLEXIBLE", label: "Horário flexível" },
+							{ val: "STUDENT", label: "Estudante" },
+							{ val: "OTHER", label: "Outro" },
+						] as const
+					).map((item) => (
 						<button
 							key={item.val}
+							type="button"
 							onClick={() => update("workRoutine", item.val)}
 							className={cn(
 								"h-11 rounded-sm text-sm font-medium border text-left px-4 transition-colors min-h-[44px]",
@@ -536,9 +555,7 @@ function StepHabitos({
 				</label>
 				<select
 					value={data.dietaryRestrictions}
-					onChange={(e) =>
-						update("dietaryRestrictions", e.target.value)
-					}
+					onChange={(e) => update("dietaryRestrictions", e.target.value)}
 					className="h-11 bg-background-subtle border border-border rounded-sm px-3 text-sm text-foreground focus:border-accent transition-colors"
 				>
 					<option value="NONE">Nenhuma</option>
@@ -559,9 +576,7 @@ function StepHabitos({
 				<input
 					type="number"
 					value={data.weeklyFoodBudget}
-					onChange={(e) =>
-						update("weeklyFoodBudget", e.target.value)
-					}
+					onChange={(e) => update("weeklyFoodBudget", e.target.value)}
 					className="h-11 bg-background-subtle border border-border rounded-sm px-3 text-sm placeholder:text-foreground-muted focus:border-accent transition-colors"
 					placeholder="150"
 					step="0.01"
@@ -629,30 +644,17 @@ function StepObjetivo({
 			<h2 className="text-xl font-bold">Seu Objetivo</h2>
 
 			<div className="flex flex-col gap-3">
-				{([
-					{
-						val: "FAT_LOSS",
-						label: "Perda de gordura",
-						desc: "Déficit calórico controlado",
-					},
-					{
-						val: "MUSCLE_GAIN",
-						label: "Ganho de massa",
-						desc: "Superávit calórico + proteína alta",
-					},
-					{
-						val: "MAINTENANCE",
-						label: "Manutenção",
-						desc: "Recomposição corporal",
-					},
-					{
-						val: "PERFORMANCE",
-						label: "Performance",
-						desc: "Maximizar performance esportiva",
-					},
-				] as const).map((item) => (
+				{(
+					[
+						{ val: "FAT_LOSS", label: "Perda de gordura", desc: "Déficit calórico controlado" },
+						{ val: "MUSCLE_GAIN", label: "Ganho de massa", desc: "Superávit calórico + proteína alta" },
+						{ val: "MAINTENANCE", label: "Manutenção", desc: "Recomposição corporal" },
+						{ val: "PERFORMANCE", label: "Performance", desc: "Maximizar performance esportiva" },
+					] as const
+				).map((item) => (
 					<button
 						key={item.val}
+						type="button"
 						onClick={() => update("goal", item.val)}
 						className={cn(
 							"rounded-sm text-sm font-medium border text-left px-4 py-3 transition-colors min-h-[44px]",
