@@ -118,3 +118,20 @@ interface UserInput {
 - `NUTRITIONIST_IA.md` — diretrizes da IA nutricionista (comportamento, tom, guardrails)
 - `DESIGN_SYSTEM.md` — padrão visual e componentes
 - `PROJECT_SPEC.md` — especificação completa do projeto
+- `CHANGELOG.md` — **OBRIGATÓRIO**: registre todas as mudanças aqui antes de concluir
+
+---
+
+## Changelog
+
+Toda alteração no código deve ser documentada em `CHANGELOG.md`:
+
+1. Antes de finalizar qualquer tarefa, adicione uma entrada no changelog
+2. Use formato: `[Desenvolvimento] - YYYY-MM-DD`
+3. Categorize: 🎯 Funcionalidades, 🐛 Correções, 🎨 Melhorias, 📦 Estrutura, ⚙️ Configuração
+4. Seja conciso mas específico: arquivo alterado, tipo de mudança, razão (se não óbvia)
+5. Não inclua detalhes de implementação no changelog — isso fica no commit
+
+**Versionamento**:
+- `v0.0.0` — desenvolvimento (atual)
+- `v1.0.0` — MVP completo (quando Fase 5 estiver funcional)
