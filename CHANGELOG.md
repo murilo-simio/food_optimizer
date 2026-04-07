@@ -9,6 +9,58 @@
 
 ## [Desenvolvimento] - 2026-04-07
 
+### 🎯 Fase 2.2 - Montador de Dieta (Passo 2)
+
+**Algoritmo guloso para montagem automática de dietas:**
+
+- **Módulo `src/lib/diet-builder.ts`**:
+  - `generateDietGreedy()`: função principal que monta dieta
+  - Filtra alimentos por restrições (VEGAN, VEGETARIAN, LACTOSE_FREE, GLUTEN_FREE, LOW_CARB, KETO)
+  - Exclui aversões do usuário (de `TasteProfile`)
+  - Prioriza `stapleFoods` (alimentos do dia-a-dia) quando disponíveis
+  - Distribui calorias por `mealSlot`:
+    * Café da manhã: 25% do total
+    * Almoço: 35%
+    * Jantar: 30%
+    * Lanches: 10% (5% cada)
+  - Distribuição de macros por refeição:
+    * Café: 25% P, 25% G, 50% C
+    * Almoço: 30% P, 30% G, 40% C
+    * Jantar: 35% P, 35% G, 30% C
+    * Lanches: 20% P, 20% G, 60% C
+  - Seleciona alimentos por categoria:
+    * Proteínas: categoria "proteina" ou "lacteo"
+    * Carboidratos: "carboidrato" ou "fruta"
+    * Gorduras: "gordura"
+    * Vegetais: "verdura"
+  - Ajusta scaling para bater meta calórica (±50 kcal tolerance)
+  - Retorna: `DietFood[]`, totais nutricionais, notas
+
+- **API routes**:
+  - `POST /api/diet/generate`:
+    * Recebe `{ userId }`
+    * Busca perfil, tasteProfile, alimentos
+    * Chama `calculateNutrition()` para metas
+    * Chama `generateDietGreedy()`
+    * Salva no banco: `Diet` + `FoodInDiet`
+    * Retorna dieta completa com resumo
+  - `GET /api/diet/latest?userId=...`:
+    * Retorna dieta mais recente do usuário
+    * Inclui alimentos formatados com valores nutricionais por porção
+
+- **Página `src/app/(app)/diet/page.tsx`**:
+  * Exibe refeições agrupadas por mealSlot
+  * Cards com totais nutricionais (cal, P, C, G)
+  * Botão "Gerar Dieta Agora" se não houver dieta
+  * Botão "Gerar Nova Dieta" para substituir atual
+  * Design mobile-first, dark mode
+
+**Limitações atuais** (para próximos passos):
+- Custo estimado: `null` (não calculado)
+- Não otimiza por custo (algoritmo guloso, não simplex)
+- Micronutrientes: dados existem nos alimentos mas não são somados no resumo
+- Preços: `FoodPrice` não utilizado ainda
+
 ### 🎯 Fase 2.2 - Tabela Nutricional (Passo 1)
 
 **Adicionada tabela nutricional de alimentos com seed inicial:**
