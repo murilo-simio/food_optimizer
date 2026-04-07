@@ -21,7 +21,8 @@
       "Read(//tmp/**)",
       "Bash(\"C:\\\\dev\\\\food_optimizer\\\\src\\\\app\\\\\\(app\\)\\\\tracking\\\\page.tsx\")",
       "Bash(npm run:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }

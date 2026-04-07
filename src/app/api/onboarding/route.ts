@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { calculateNutrition, CalculatorInput } from "@/lib/calculators";
 
 const profileSchema = z.object({
 	userId: z.string(),
@@ -29,70 +30,67 @@ export async function POST(req: NextRequest) {
 		const body = await req.json();
 		const data = profileSchema.parse(body);
 
-		// Calculate simple TDEE estimate
-		const activityMultiplier: Record<string, number> = {
-			SEDENTARY: 1.2,
-			LIGHT: 1.375,
-			MODERATE: 1.55,
-			ACTIVE: 1.725,
-			VERY_ACTIVE: 1.9,
+		// Preparar input para calculadoras
+		const calculatorInput: CalculatorInput = {
+			profile: {
+				age: data.age,
+				sex: data.sex,
+				heightCm: data.heightCm,
+				weightKg: data.weightKg,
+				bodyFatPercentage: data.bodyFatPercentage,
+				country: data.country,
+				state: data.state,
+				city: data.city,
+			},
+			activity: {
+				activityLevel: data.activityLevel,
+				exerciseFrequencyDays: data.exerciseFrequency,
+				primaryExerciseType: data.primaryExerciseType,
+				exerciseDurationMin: data.exerciseDurationMin,
+				exerciseIntensity: data.exerciseIntensity,
+			},
+			work: {
+				workRoutine: data.workRoutine,
+			},
+			goal: {
+				type: data.goal,
+			},
+			// Geographical factors: omitidos, serão calculados automaticamente pela calculateNutrition
 		};
 
-		// Mifflin-St Jeor
-		let bmr: number;
-		if (data.sex === "MALE") {
-			bmr = 10 * data.weightKg + 6.25 * data.heightCm - 5 * data.age + 5;
-		} else {
-			bmr = 10 * data.weightKg + 6.25 * data.heightCm - 5 * data.age - 161;
-		}
+		// Calcular métricas nutricionais completas
+		const nutritionResult = calculateNutrition(calculatorInput);
 
-		const tdee = Math.round(bmr * activityMultiplier[data.activityLevel]);
-
-		// Macro targets based on goal
-	 const leanMass = data.bodyFatPercentage
-			? data.weightKg * (1 - data.bodyFatPercentage / 100)
-			: data.weightKg;
-
-		const proteinMultiplier: Record<string, number> = {
-			FAT_LOSS: 2.2,
-			MUSCLE_GAIN: 1.8,
-			MAINTENANCE: 1.6,
-			PERFORMANCE: 2.0,
-		};
-
-		const targetProteinG = Math.round(leanMass * proteinMultiplier[data.goal]);
-		const targetFatG = Math.round(data.weightKg * 0.9);
-
-		const caloriesAdjust: Record<string, number> = {
-			FAT_LOSS: -400,
-			MUSCLE_GAIN: 300,
-			MAINTENANCE: 0,
-			PERFORMANCE: 0,
-		};
-
-		const targetCalories = tdee + caloriesAdjust[data.goal];
-		const carbCalories = targetCalories - targetProteinG * 4 - targetFatG * 9;
-		const targetCarbsG = Math.round(carbCalories / 4);
-
-		let profile = await prisma.userProfile.upsert({
+		// Salvar perfil + cálculos
+		const profile = await prisma.userProfile.upsert({
 			where: { userId: data.userId },
 			update: data,
 			create: data,
 		});
 
-		// Save computed values
-		profile = await prisma.userProfile.update({
+		// Atualizar com valores calculados
+		await prisma.userProfile.update({
 			where: { userId: data.userId },
 			data: {
-				tdee,
-				targetCalories,
-				targetProteinG,
-				targetFatG,
-				targetCarbsG,
+				tdee: nutritionResult.metrics.tdee,
+				targetCalories: nutritionResult.metrics.targetCalories,
+				targetProteinG: nutritionResult.metrics.targetProteinG,
+				targetFatG: nutritionResult.metrics.targetFatG,
+				targetCarbsG: nutritionResult.metrics.targetCarbsG,
 			},
 		});
 
-		return NextResponse.json(profile, { status: 200 });
+		// Retornar resultado completo
+		return NextResponse.json(
+			{
+				profile,
+				nutrition: nutritionResult.metrics,
+				micronutrients: nutritionResult.micronutrients,
+				adjustments: nutritionResult.adjustments,
+				notes: nutritionResult.notes,
+			},
+			{ status: 200 }
+		);
 	} catch (error) {
 		if (error instanceof z.ZodError) {
 			return NextResponse.json(
@@ -100,6 +98,7 @@ export async function POST(req: NextRequest) {
 				{ status: 400 }
 			);
 		}
+		console.error("Error in onboarding:", error);
 		return NextResponse.json(
 			{ error: "Erro interno do servidor" },
 			{ status: 500 }
