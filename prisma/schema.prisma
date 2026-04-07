@@ -259,6 +259,9 @@ model Food {
   potassium_MG Float @default(0) // mg
   sodium_MG    Float @default(0) // mg
   selenium_UG  Float @default(0) // mcg
+  phosphorus_MG Float @default(0) // mg
+  choline_MG    Float @default(0) // mg
+  manganese_MG  Float @default(0) // mg
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
