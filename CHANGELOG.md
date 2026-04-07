@@ -37,6 +37,12 @@
 - Isso permite identificar exercícios de resistência (musculação, crossfit, HIIT, calistenia) e ajustar a proteína adequadamente
 - Anteriormente, `primaryExerciseType` permanecia undefined, fazendo com que `hasResistanceExercise` fosse sempre false
 
+**Melhoria no cálculo de proteína** (src/lib/calculators/index.ts:136-157):
+- Lógica de detecção de exercício de resistência aprimorada:
+  - Tipos de resistência direta: WEIGHTLIFTING, CROSSFIT, HIIT, CALISTHENICS (qualquer frequência)
+  - Tipos de endurance com alta intensidade: RUNNING, CYCLING, SWIMMING, MARTIAL_ARTS apenas se `exerciseIntensity = INTENSE` **e** `exerciseFrequencyDays >= 2`
+- Considera agora frequência e intensidade, não apenas o tipo
+
 **Integração com API:**
 - `src/app/api/onboarding/route.ts` atualizado para usar `calculateNutrition()` em vez da lógica antiga
 - Retorna agora: métricas completas, micronutrientes, ajustes aplicados e notas explicativas

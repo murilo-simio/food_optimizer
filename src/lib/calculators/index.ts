@@ -133,8 +133,38 @@ export function calculateNutrition(input: CalculatorInput): CalculatorResult {
 	const targetCalories = safeTdee + goalAdjustment;
 
 	// 6. Macros
-	const resistanceTypes = ["WEIGHTLIFTING", "CROSSFIT", "HIIT", "CALISTHENICS"];
-	const hasResistanceExercise = !!(input.activity.primaryExerciseType && resistanceTypes.includes(input.activity.primaryExerciseType));
+	// Determina se o exercíciocounts como "resistência" para fins de cálculo de proteína
+	// Considera: tipo de exercício, frequência semanal e intensidade
+	const isResistanceByType = (type?: string): boolean => {
+		const resistanceTypes = ["WEIGHTLIFTING", "CROSSFIT", "HIIT", "CALISTHENICS"];
+		return !!(type && resistanceTypes.includes(type));
+	};
+
+	// Exercícios de alta intensidade podem contar como resistência mesmo não sendo " pesos"
+	const isHighIntensityEndurance = (
+		type?: string,
+		intensity?: string,
+		frequency?: number
+	): boolean => {
+		if (!type || !intensity || !frequency) return false;
+
+		// Corrida, ciclismo, natação, artes marciais com alta intensidade + frequência mínima
+		const enduranceTypes = ["RUNNING", "CYCLING", "SWIMMING", "MARTIAL_ARTS"];
+		const isEnduranceHighIntensity =
+			enduranceTypes.includes(type) &&
+			intensity === "INTENSE" &&
+			frequency >= 2;
+
+		return isEnduranceHighIntensity;
+	};
+
+	const hasResistanceExercise =
+		isResistanceByType(input.activity.primaryExerciseType) ||
+		isHighIntensityEndurance(
+			input.activity.primaryExerciseType,
+			input.activity.exerciseIntensity,
+			input.activity.exerciseFrequencyDays
+		);
 
 	const proteinG = calculateProteinTarget(leanMass, input.goal.type, hasResistanceExercise);
 	const fatG = calculateFatTarget(targetCalories, input.profile.weightKg, input.goal.type);
