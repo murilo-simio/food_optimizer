@@ -78,7 +78,7 @@ export default function OnboardingPage() {
 			case 1:
 				return data.heightCm && data.weightKg;
 			case 2:
-				return data.activityLevel && data.exerciseFrequency;
+				return data.activityLevel && data.exerciseFrequency && data.primaryExerciseType;
 			case 3:
 				return data.workRoutine;
 			case 4:
@@ -135,6 +135,10 @@ export default function OnboardingPage() {
 				setSaving(false);
 				return;
 			}
+
+			// DEBUG: Ver resposta
+			const profileData = await profileRes.json();
+			console.log("Onboarding API response:", profileData);
 
 			const tasteRes = await fetch("/api/onboarding/taste", {
 				method: "POST",
@@ -482,6 +486,42 @@ function StepExercicio({
 					))}
 				</div>
 			</div>
+
+				<div className="flex flex-col gap-1.5">
+					<label className="text-sm font-medium">
+						Tipo de exercício principal
+					</label>
+					<div className="flex flex-col gap-2">
+						{(
+							[
+								{ val: "WEIGHTLIFTING", label: "Musculação / Levantamento de peso" },
+								{ val: "RUNNING", label: "Corrida" },
+								{ val: "CYCLING", label: "Ciclismo" },
+								{ val: "CROSSFIT", label: "CrossFit" },
+								{ val: "CALISTHENICS", label: "Calistenia / Exercícios corporais" },
+								{ val: "SWIMMING", label: "Natação" },
+								{ val: "MARTIAL_ARTS", label: "Artes marciais" },
+								{ val: "HIIT", label: "HIIT / Treino intervalado" },
+								{ val: "WALKING", label: "Caminhada" },
+								{ val: "OTHER", label: "Outro" },
+							] as const
+						).map((item) => (
+							<button
+								key={item.val}
+								type="button"
+								onClick={() => update("primaryExerciseType", item.val)}
+								className={cn(
+									"rounded-sm text-sm font-medium border text-left px-4 py-3 transition-colors min-h-[44px]",
+									data.primaryExerciseType === item.val
+										? "bg-accent text-foreground-inverse border-accent"
+										: "bg-background-subtle text-foreground-muted border-border hover:border-accent"
+								)}
+							>
+								<span className="block font-semibold">{item.label}</span>
+							</button>
+						))}
+					</div>
+				</div>
 		</div>
 	);
 }

@@ -11,10 +11,11 @@ export default function DashboardPage() {
 	const { data: session, status } = useSession();
 	const router = useRouter();
 	const [onboardingComplete, setOnboardingComplete] = useState(false);
+	const [profile, setProfile] = useState<any>(null);
 
 	useEffect(() => {
 		if (status === "loading" || !session?.user?.id) return;
-		
+
 		const checkOnboarding = async () => {
 			try {
 				const res = await fetch(`/api/profile?userId=${session.user.id}`);
@@ -26,13 +27,14 @@ export default function DashboardPage() {
 					router.push("/onboarding");
 				} else {
 					setOnboardingComplete(true);
+					setProfile(data.profile);
 				}
 			} catch (error) {
 				console.error("Error checking onboarding:", error);
 				setOnboardingComplete(false);
 			}
 		};
-		
+
 		checkOnboarding();
 	}, [session, status, router]);
 
@@ -72,10 +74,30 @@ export default function DashboardPage() {
 			</header>
 
 			<div className="grid grid-cols-2 gap-4 mb-6">
-				<StatCard label="Calorias" value="—" unit="kcal" status="empty" />
-				<StatCard label="Proteína" value="—" unit="g" status="empty" />
-				<StatCard label="Carbos" value="—" unit="g" status="empty" />
-				<StatCard label="Gordura" value="—" unit="g" status="empty" />
+				<StatCard
+					label="Calorias"
+					value={profile?.targetCalories?.toFixed(0) || "—"}
+					unit="kcal"
+					status={profile ? "on-track" : "empty"}
+				/>
+				<StatCard
+					label="Proteína"
+					value={profile?.targetProteinG?.toFixed(0) || "—"}
+					unit="g"
+					status={profile ? "on-track" : "empty"}
+				/>
+				<StatCard
+					label="Carbos"
+					value={profile?.targetCarbsG?.toFixed(0) || "—"}
+					unit="g"
+					status={profile ? "on-track" : "empty"}
+				/>
+				<StatCard
+					label="Gordura"
+					value={profile?.targetFatG?.toFixed(0) || "—"}
+					unit="g"
+					status={profile ? "on-track" : "empty"}
+				/>
 			</div>
 
 			<div className="bg-background-elevated border border-border rounded-md p-6 text-center">

@@ -9,6 +9,39 @@
 
 ## [Desenvolvimento] - 2026-04-07
 
+### 🎯 Fase 2.1 - Sistema de Calculadoras Nutricionais
+
+**Implementado sistema modular de cálculo nutricional com base em evidências científicas:**
+
+- **`src/lib/calculators/`**: Nova pasta com sistema de calculadoras modulares
+  - `types.ts`: Tipos compartilhados (UserProfile, CalculatorInput, CalculatorResult, etc.)
+  - `bmr.ts`: Cálculo de Taxa Metabólica Basal (Mifflin-St Jeor, 2005)
+  - `exercise.ts`: Ajustes por exercício físico (gasto calórico, proteína extra por tipo de treino)
+  - `work.ts`: Ajustes por tipo de trabalho (NEAT - Non-Exercise Activity Thermogenesis)
+  - `climate.ts`: Ajustes geográficos/climáticos (vitamina D, eletrólitos)
+  - `macros.ts`: Distribuição de macronutrientes (proteína, gordura, carboidrato, fibra)
+  - `micronutrients.ts`: Necessidades de vitaminas e minerais (DRI, WHO, EFSA)
+  - `index.ts`: Função principal `calculateNutrition()` que combina todos os ajustes
+
+**Características científicas:**
+- Fórmulas baseadas em literatura revisada (Mifflin-St Jeor, ISSN, Dietary Guidelines, DRI)
+- Ajuste por exercício de resistência vs endurance (diferentes necessidades proteicas)
+- Consideração de clima/geografia: vit D multiplicador para países frios, eletrólitos para climas quentes
+- Ajuste por tipo de trabalho (CLT 9-5, home office, turnos, etc.) via NEAT
+- Meta calórica com déficit/superávit baseada no objetivo
+- Cálculo de água considerando peso, exercício e clima
+- Modulares: cada calculadora independente, facilitando ajustes futuros e integração com tracking
+
+**Integração com formulário de onboarding:**
+- Adicionado campo "Tipo de exercício principal" no passo de Exercício (StepExercicio) para coletar `primaryExerciseType`
+- Isso permite identificar exercícios de resistência (musculação, crossfit, HIIT, calistenia) e ajustar a proteína adequadamente
+- Anteriormente, `primaryExerciseType` permanecia undefined, fazendo com que `hasResistanceExercise` fosse sempre false
+
+**Integração com API:**
+- `src/app/api/onboarding/route.ts` atualizado para usar `calculateNutrition()` em vez da lógica antiga
+- Retorna agora: métricas completas, micronutrientes, ajustes aplicados e notas explicativas
+- Todas as validações Zod mantidas
+
 ### 🐛 Correções de Bugs
 
 - **Codificação de caracteres**: Corrigidas sequências de escape Latin-1 (`\xED`, `\xE7`, `\xE3`, etc.) em `src/app/(app)/tracking/page.tsx`. Todos os acentos agora usam UTF-8 correto.
@@ -36,6 +69,14 @@
 - Revisados e validados todos os arquivos .md da raiz (AGENTS.md, DESIGN_SYSTEM.md, NUTRITIONIST_IA.md, PROJECT_SPEC.md, README.md)
 - **Adicionado CHANGELOG.md** para rastrear todas as mudanças
 - **Atualizado AGENTS.md** com seção obrigatória de registro no changelog para todos os agentes
+
+---
+
+### 🐛 Correções de Bugs
+
+- **API profile**: endpoint `/api/profile` agora retorna `profile` com todos os dados calculados (tdee, targetCalories, macros) para que o dashboard possa exibir as métricas nutricionais (src/app/api/profile/route.ts:25-27)
+- **Dashboard**: atualizado para consumir `profile` da API e exibir valores de calorias, proteína, carbos e gordura nos cards (src/app/(app)/dashboard/page.tsx:12, 75-82)
+- **Calculadoras**: removida referência a `input.profile.latitude` que não existe no tipo `UserProfile` — agora usa fallback baseado em país (src/lib/calculators/index.ts:107-108)
 
 ---
 

@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
 		]);
 
 		return NextResponse.json({
+			profile,
 			bodyRecords,
 			exerciseLogs,
 			onboardingComplete: !!profile,

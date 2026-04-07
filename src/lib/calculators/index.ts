@@ -104,8 +104,8 @@ export function calculateNutrition(input: CalculatorInput): CalculatorResult {
 	const workAdj = calculateWorkAdjustment(input.work, bmr, input.profile.age);
 
 	// 3. Fatores geográficos
-	const climateZone = determineClimateZone(input.profile.latitude, input.profile.country);
-	const sunExposure = estimateSunExposure(input.profile.latitude, climateZone);
+	const climateZone = determineClimateZone(undefined, input.profile.country);
+	const sunExposure = estimateSunExposure(undefined, climateZone);
 	const multipliers = determineMultipliers(climateZone);
 	const geoFactors: GeographicalFactors = {
 		climateZone,

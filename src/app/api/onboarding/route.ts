@@ -28,7 +28,9 @@ const profileSchema = z.object({
 export async function POST(req: NextRequest) {
 	try {
 		const body = await req.json();
+		console.log("Onboarding POST received:", body);
 		const data = profileSchema.parse(body);
+		console.log("Parsed data userId:", data.userId);
 
 		// Preparar input para calculadoras
 		const calculatorInput: CalculatorInput = {
