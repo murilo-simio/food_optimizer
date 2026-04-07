@@ -47,10 +47,12 @@ function WeightForm({ userId }: { userId: string }) {
 	const [weight, setWeight] = useState("");
 	const [bodyFat, setBodyFat] = useState("");
 	const [success, setSuccess] = useState(false);
+	const [error, setError] = useState<string | null>(null);
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
 		setSuccess(false);
+		setError(null);
 
 		const res = await fetch("/api/tracking/weight", {
 			method: "POST",
@@ -62,10 +64,14 @@ function WeightForm({ userId }: { userId: string }) {
 			}),
 		});
 
+		const data = await res.json();
+
 		if (res.ok) {
 			setSuccess(true);
 			setWeight("");
 			setBodyFat("");
+		} else {
+			setError(data.error ?? "Erro ao registrar peso");
 		}
 	}
 
@@ -74,6 +80,11 @@ function WeightForm({ userId }: { userId: string }) {
 			{success && (
 				<div className="text-success text-sm bg-success/10 border border-success/20 rounded-sm px-3 py-2">
 					Peso registrado com sucesso!
+				</div>
+			)}
+			{error && (
+				<div className="text-error text-sm bg-error/10 border border-error/20 rounded-sm px-3 py-2">
+					{error}
 				</div>
 			)}
 
@@ -120,10 +131,12 @@ function ExerciseForm({ userId }: { userId: string }) {
 	const [intensity, setIntensity] = useState("MODERATE");
 	const [calories, setCalories] = useState("");
 	const [success, setSuccess] = useState(false);
+	const [error, setError] = useState<string | null>(null);
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
 		setSuccess(false);
+		setError(null);
 
 		const res = await fetch("/api/tracking/exercise", {
 			method: "POST",
@@ -137,11 +150,15 @@ function ExerciseForm({ userId }: { userId: string }) {
 			}),
 		});
 
+		const data = await res.json();
+
 		if (res.ok) {
 			setSuccess(true);
 			setType("");
 			setDuration("");
 			setCalories("");
+		} else {
+			setError(data.error ?? "Erro ao registrar exercício");
 		}
 	}
 
@@ -150,6 +167,11 @@ function ExerciseForm({ userId }: { userId: string }) {
 			{success && (
 				<div className="text-success text-sm bg-success/10 border border-success/20 rounded-sm px-3 py-2">
 					Exercício registrado!
+				</div>
+			)}
+			{error && (
+				<div className="text-error text-sm bg-error/10 border border-error/20 rounded-sm px-3 py-2">
+					{error}
 				</div>
 			)}
 
@@ -170,6 +192,8 @@ function ExerciseForm({ userId }: { userId: string }) {
 					<option value="SWIMMING">Natação</option>
 					<option value="WALKING">Caminhada</option>
 					<option value="HIIT">HIIT</option>
+                  <option value="MARTIAL_ARTS">Artes marciais</option>
+                  <option value="OTHER">Outro</option>
 				</select>
 			</div>
 
@@ -239,18 +263,22 @@ function MealForm({ userId }: { userId: string }) {
 	const [mealSlot, setMealSlot] = useState("almoco");
 	const [foods, setFoods] = useState("");
 	const [success, setSuccess] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+	const [notFoundFoods, setNotFoundFoods] = useState<string[]>([]);
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
 		setSuccess(false);
+		setError(null);
+		setNotFoundFoods([]);
 
 		// Parse: "arroz 200g, frango 150g" => [{name, grams}]
 		const parsed = foods
-			.split(",")
+			.split("\n")
 			.map((f: string) => f.trim())
 			.filter(Boolean)
 			.map((f: string) => {
-				const match = f.match(/^(.+?)(\d+(?:\.\d+)?)\s*g$/i);
+				const match = f.match(/^(.+?)\s*(\d+(?:\.\d+)?)\s*g$/i);
 				if (match) {
 					return { name: match[1].trim(), grams: parseFloat(match[2]) };
 				}
@@ -258,15 +286,27 @@ function MealForm({ userId }: { userId: string }) {
 			})
 			.filter(Boolean) as { name: string; grams: number }[];
 
+		if (parsed.length === 0) {
+			setError("Formato inválido. Use: nome quantidade_g (ex: arroz 200g)");
+			return;
+		}
+
 		const res = await fetch("/api/tracking/meal", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ userId, mealSlot, foods: parsed }),
 		});
 
+		const data = await res.json();
+
 		if (res.ok) {
 			setSuccess(true);
 			setFoods("");
+			if (data.notFound && data.notFound.length > 0) {
+				setNotFoundFoods(data.notFound);
+			}
+		} else {
+			setError(data.error ?? "Erro ao registrar refeição");
 		}
 	}
 
@@ -274,7 +314,19 @@ function MealForm({ userId }: { userId: string }) {
 		<form onSubmit={handleSubmit} className="flex flex-col gap-5">
 			{success && (
 				<div className="text-success text-sm bg-success/10 border border-success/20 rounded-sm px-3 py-2">
-					Refeição registrada!
+					Refeição registrada com sucesso!
+				</div>
+			)}
+			{error && (
+				<div className="text-error text-sm bg-error/10 border border-error/20 rounded-sm px-3 py-2">
+					{error}
+				</div>
+			)}
+			{notFoundFoods.length > 0 && (
+				<div className="text-warning text-sm bg-warning/10 border border-warning/20 rounded-sm px-3 py-2">
+					<p className="font-medium">Alimentos não encontrados:</p>
+					<p className="mt-1">{notFoundFoods.join(", ")}</p>
+					<p className="mt-1 text-xs">A tabela nutricional será populada nas próximas fases.</p>
 				</div>
 			)}
 

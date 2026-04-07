@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import z from "zod";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
@@ -24,10 +24,12 @@ export async function POST(req: NextRequest) {
 			},
 		});
 
-		// Create items — lookup or create foods by name
+		// Create items — lookup or track not found foods
+		const notFound: string[] = [];
+
 		for (const food of data.foods) {
 			const existingFood = await prisma.food.findFirst({
-				where: { name: { contains: food.name, mode: "insensitive" } },
+				where: { name: { contains: food.name } },
 			});
 
 			if (existingFood) {
@@ -38,10 +40,12 @@ export async function POST(req: NextRequest) {
 						grams: food.grams,
 					},
 				});
+			} else {
+				notFound.push(`${food.name} (${food.grams}g)`);
 			}
 		}
 
-		return NextResponse.json({ ok: true, mealLogId: mealLog.id }, { status: 201 });
+		return NextResponse.json({ ok: true, mealLogId: mealLog.id, notFound }, { status: 201 });
 	} catch (error) {
 		if (error instanceof z.ZodError) {
 			return NextResponse.json(

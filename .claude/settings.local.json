@@ -14,7 +14,9 @@
       "Bash(return)",
       "Bash(ls:*)",
       "Bash(npx prisma:*)",
-      "Bash(npx:*)"
+      "Bash(npx:*)",
+      "Bash(findstr:*)",
+      "Bash(cat \"C:\\\\dev\\\\food_optimizer\\\\src\\\\app\\\\\\(app\\)\\\\tracking\\\\page.tsx\")"
     ]
   }
 }
