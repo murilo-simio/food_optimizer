@@ -55,11 +55,36 @@
   * Botão "Gerar Nova Dieta" para substituir atual
   * Design mobile-first, dark mode
 
-**Limitações atuais** (para próximos passos):
-- Custo estimado: `null` (não calculado)
-- Não otimiza por custo (algoritmo guloso, não simplex)
-- Micronutrientes: dados existem nos alimentos mas não são somados no resumo
-- Preços: `FoodPrice` não utilizado ainda
+**Otimização por custo (Passo 3):**
+- **Módulo `src/lib/optimizer.ts`**:
+  - `optimizeDietCost()`: refina dieta buscando menor custo total
+  - Heurística: prioriza alimentos com melhor custo por nutriente (proteína, carboidrato)
+  - Usa preços de `FoodPrice` (preço por 100g)
+  - Garante constraints de macros (±5% das metas)
+  - Garante variedade mínima (3 categorias diferentes)
+  - Considera preferências (staple foods) e aversões
+  - Retorna `OptimizedDiet` com custo total calculado
+
+- **Seed de preços** (`prisma/seed-prices.js`):
+  - 27 preços simulados baseados em mercado brasileiro
+  - Preços por kg variam: arroz R$8-12, frango R$35, whey R$120, azeite R$80, etc.
+  - Executar: `node prisma/seed-prices.js`
+  - Armazenado em `FoodPrice` (modelo já existente no schema)
+
+- **Integração na API** (`/api/diet/generate`):
+  - Gera dieta inicial com `generateDietGreedy()`
+  - Busca preços do banco (`FoodPrice`)
+  - Se houver preços para ≥3 alimentos, aplica `optimizeDietCost()`
+  - Substitui dieta pela versão otimizada com `estimatedCost` preenchido
+  - Adiciona nota: "Otimizado por custo com base nos preços disponíveis."
+
+**Resultado:** Dieta agora possui custo estimado (R$/dia) e prioriza alimentos mais econômicos quando nutricionalmente adequados.
+
+**Próximas melhorias (Fase 2.3+):**
+- Integrar solver simplex para ótimo global (ex: biblioteca `linear-programming`)
+- Scraper de preços reais (supermercados online)
+- Ajuste fino por micronutrientes (ex: "aumentar ferro")
+- Considerar disponibilidade regional (alimentos da época, região)
 
 ### 🎯 Fase 2.2 - Tabela Nutricional (Passo 1)
 
