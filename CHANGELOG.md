@@ -9,6 +9,22 @@
 
 ## [Desenvolvimento] - 2026-04-07
 
+### 🎯 Fase 2.2 - Tabela Nutricional (Passo 1)
+
+**Adicionada tabela nutricional de alimentos com seed inicial:**
+
+- **Modelo Food (Prisma)**: expandido com campos de minerais adicionais:
+  - `phosphorus_MG`, `choline_MG`, `manganese_MG` (todos @default(0))
+- **Seed completo** (`prisma/seed.ts`): 27 alimentos básicos
+  - Categorias: carboidrato, proteina, verdura, fruta, lacteo, gordura, suplemento
+  - Valores nutricionais por 100g: calorias, macros, fibras, açúcares
+  - Vitaminas: A, C, D, E, K, B1, B2, B3, B5, B6, B9 (folate), B12
+  - Minerais: cálcio, ferro, magnésio, zinco, potássio, sódio, selênio, fósforo, colina, manganês
+  - Fontes: TACO (Tabela Brasileira) e USDA
+  - Alimentos incluídos: arroz branco/integral, aveia, batata, pão integral, frango, ovo, carne bovina, atum, feijão preto, lentilha, brócolis, espinafre, tomate, cenoura, alface, banana, maçã, laranja, morango, leite, queijo minas, iogurte, azeite, manteiga, abacate, whey protein
+- **Configuração**: `package.json` adiciona `"prisma.seed": "tsx prisma/seed.ts"`
+- **Execução**: `npx tsx prisma/seed.ts` cria 27 registros (skip de duplicatas automático)
+
 ### 🎯 Fase 2.1 - Sistema de Calculadoras Nutricionais
 
 **Implementado sistema modular de cálculo nutricional com base em evidências científicas:**
