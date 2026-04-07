@@ -43,6 +43,10 @@
   - Tipos de endurance com alta intensidade: RUNNING, CYCLING, SWIMMING, MARTIAL_ARTS apenas se `exerciseIntensity = INTENSE` **e** `exerciseFrequencyDays >= 2`
 - Considera agora frequência e intensidade, não apenas o tipo
 
+**Melhoria de UX no onboarding:**
+- Adicionada explicação ao lado do campo "Tipo de exercício principal" descrevendo como a escolha afeta as necessidades de proteína (src/app/(app)/onboarding/page.tsx:491-498)
+- Texto de ajuda: "Exercícios de resistência (musculação, HIIT, etc.) requerem mais proteína para construção/recuperação muscular."
+
 **Integração com API:**
 - `src/app/api/onboarding/route.ts` atualizado para usar `calculateNutrition()` em vez da lógica antiga
 - Retorna agora: métricas completas, micronutrientes, ajustes aplicados e notas explicativas

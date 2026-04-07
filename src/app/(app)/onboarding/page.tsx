@@ -490,7 +490,13 @@ function StepExercicio({
 				<div className="flex flex-col gap-1.5">
 					<label className="text-sm font-medium">
 						Tipo de exercício principal
+						<span className="text-foreground-muted font-normal">
+							{" "}— afeta necessidades de proteína
+						</span>
 					</label>
+					<p className="text-xs text-foreground-muted">
+						Exercícios de resistência (musculação, HIIT, etc.) requerem mais proteína para construção/recuperação muscular.
+					</p>
 					<div className="flex flex-col gap-2">
 						{(
 							[
