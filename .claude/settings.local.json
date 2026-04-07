@@ -16,7 +16,11 @@
       "Bash(npx prisma:*)",
       "Bash(npx:*)",
       "Bash(findstr:*)",
-      "Bash(cat \"C:\\\\dev\\\\food_optimizer\\\\src\\\\app\\\\\\(app\\)\\\\tracking\\\\page.tsx\")"
+      "Bash(cat \"C:\\\\dev\\\\food_optimizer\\\\src\\\\app\\\\\\(app\\)\\\\tracking\\\\page.tsx\")",
+      "Bash(cat \"C:\\\\dev\\\\food_optimizer\\\\src\\\\app\\\\\\(app\\)\\\\dashboard\\\\page.tsx\")",
+      "Read(//tmp/**)",
+      "Bash(\"C:\\\\dev\\\\food_optimizer\\\\src\\\\app\\\\\\(app\\)\\\\tracking\\\\page.tsx\")",
+      "Bash(npm run:*)"
     ]
   }
 }

@@ -192,8 +192,8 @@ function ExerciseForm({ userId }: { userId: string }) {
 					<option value="SWIMMING">Natação</option>
 					<option value="WALKING">Caminhada</option>
 					<option value="HIIT">HIIT</option>
-                  <option value="MARTIAL_ARTS">Artes marciais</option>
-                  <option value="OTHER">Outro</option>
+					<option value="MARTIAL_ARTS">Artes marciais</option>
+					<option value="OTHER">Outro</option>
 				</select>
 			</div>
 
@@ -287,7 +287,7 @@ function MealForm({ userId }: { userId: string }) {
 			.filter(Boolean) as { name: string; grams: number }[];
 
 		if (parsed.length === 0) {
-			setError("Formato inválido. Use: nome quantidade_g (ex: arroz 200g)");
+			setError("Formato inválido. Use: nome quantidade_g (ex: arroz 200g) em cada linha");
 			return;
 		}
 

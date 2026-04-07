@@ -201,9 +201,7 @@ export default function OnboardingPage() {
 			</div>
 
 			<div className="flex-1 px-4 py-6 max-w-lg mx-auto w-full">
-				{step === 0 && (
-					<StepDadosPessoais data={data} update={updateField} />
-				)}
+				{step === 0 && <StepDadosPessoais data={data} update={updateField} />}
 				{step === 1 && <StepCorpo data={data} update={updateField} />}
 				{step === 2 && <StepExercicio data={data} update={updateField} />}
 				{step === 3 && <StepHabitos data={data} update={updateField} />}
@@ -246,19 +244,6 @@ export default function OnboardingPage() {
 	);
 }
 
-function StepLabel({ value, label }: { value: string; label: string }) {
-	return (
-		<span
-			className={cn(
-				"h-11 rounded-sm text-sm font-medium border transition-colors min-h-[44px]",
-				value ? "bg-accent text-foreground-inverse border-accent" : "bg-background-subtle text-foreground-muted border-border hover:border-accent"
-			)}
-		>
-			{label}
-		</span>
-	);
-}
-
 function StepDadosPessoais({
 	data,
 	update,
@@ -271,58 +256,58 @@ function StepDadosPessoais({
 			<h2 className="text-xl font-bold">Dados Pessoais</h2>
 
 			<div className="flex flex-col gap-1.5">
-			<label className="text-sm font-medium">Idade</label>
-			<input
-				type="number"
-				value={data.age}
-				onChange={(e) => update("age", e.target.value)}
-				className="h-11 bg-background-subtle border border-border rounded-sm px-3 text-sm placeholder:text-foreground-muted focus:border-accent transition-colors"
-				placeholder="25"
-				min={12}
-				max={100}
-			/>
-		</div>
-
-		<div className="flex flex-col gap-1.5">
-			<label className="text-sm font-medium">Sexo biológico</label>
-			<div className="grid grid-cols-2 gap-3">
-				{(
-					[
-						{ val: "MALE", label: "Masculino" },
-						{ val: "FEMALE", label: "Feminino" },
-					] as const
-				).map((item) => (
-					<button
-						key={item.val}
-						type="button"
-						onClick={() => update("sex", item.val)}
-						className={cn(
-							"h-11 rounded-sm text-sm font-medium border transition-colors min-h-[44px]",
-							data.sex === item.val
-								? "bg-accent text-foreground-inverse border-accent"
-								: "bg-background-subtle text-foreground-muted border-border hover:border-accent"
-						)}
-					>
-						{item.label}
-					</button>
-				))}
+				<label className="text-sm font-medium">Idade</label>
+				<input
+					type="number"
+					value={data.age}
+					onChange={(e) => update("age", e.target.value)}
+					className="h-11 bg-background-subtle border border-border rounded-sm px-3 text-sm placeholder:text-foreground-muted focus:border-accent transition-colors"
+					placeholder="25"
+					min={12}
+					max={100}
+				/>
 			</div>
-		</div>
 
-		<div className="flex flex-col gap-1.5">
-			<label className="text-sm font-medium">País</label>
-			<input
-				type="text"
-				value={data.country}
-				onChange={(e) => update("country", e.target.value.toUpperCase())}
-				className="h-11 bg-background-subtle border border-border rounded-sm px-3 text-sm placeholder:text-foreground-muted focus:border-accent transition-colors"
-				placeholder="BR"
-				maxLength={3}
-			/>
-		</div>
+			<div className="flex flex-col gap-1.5">
+				<label className="text-sm font-medium">Sexo biológico</label>
+				<div className="grid grid-cols-2 gap-3">
+					{(
+						[
+							{ val: "MALE", label: "Masculino" },
+							{ val: "FEMALE", label: "Feminino" },
+						] as const
+					).map((item) => (
+						<button
+							key={item.val}
+							type="button"
+							onClick={() => update("sex", item.val)}
+							className={cn(
+								"h-11 rounded-sm text-sm font-medium border transition-colors min-h-[44px]",
+								data.sex === item.val
+									? "bg-accent text-foreground-inverse border-accent"
+									: "bg-background-subtle text-foreground-muted border-border hover:border-accent"
+							)}
+						>
+							{item.label}
+						</button>
+					))}
+				</div>
+			</div>
 
-		<div className="flex flex-col gap-1.5">
-			<label className="text-sm font-medium">Estado (UF)</label>
+			<div className="flex flex-col gap-1.5">
+				<label className="text-sm font-medium">País</label>
+				<input
+					type="text"
+					value={data.country}
+					onChange={(e) => update("country", e.target.value.toUpperCase())}
+					className="h-11 bg-background-subtle border border-border rounded-sm px-3 text-sm placeholder:text-foreground-muted focus:border-accent transition-colors"
+					placeholder="BR"
+					maxLength={3}
+				/>
+			</div>
+
+			<div className="flex flex-col gap-1.5">
+				<label className="text-sm font-medium">Estado (UF)</label>
 				<input
 					type="text"
 					value={data.state}

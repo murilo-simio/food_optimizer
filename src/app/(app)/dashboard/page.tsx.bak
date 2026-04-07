@@ -14,26 +14,16 @@ export default function DashboardPage() {
 
 	useEffect(() => {
 		if (status === "loading" || !session?.user?.id) return;
-		
-		const checkOnboarding = async () => {
-			try {
-				const res = await fetch(`/api/profile?userId=${session.user.id}`);
-				if (!res.ok) {
-					throw new Error(`HTTP error! status: ${res.status}`);
-				}
-				const data = await res.json();
+		fetch(`/api/profile?userId=${session.user.id}`)
+			.then((res) => res.json())
+			.then((data) => {
 				if (!data.onboardingComplete) {
 					router.push("/onboarding");
 				} else {
 					setOnboardingComplete(true);
 				}
-			} catch (error) {
-				console.error("Error checking onboarding:", error);
-				setOnboardingComplete(false);
-			}
-		};
-		
-		checkOnboarding();
+			})
+			.catch(() => setOnboardingComplete(false));
 	}, [session, status, router]);
 
 	if (status === "loading" || !session) {
