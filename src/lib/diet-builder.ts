@@ -92,7 +92,7 @@ export function generateDietGreedy(config: DietGenerationConfig): GeneratedDiet 
   // 5. Para cada slot, montar refeição
   for (const slot of mealSlots) {
     const slotTargetCal = slotCalories[slot];
-    let slotCalories = 0;
+    let currentSlotCalories = 0; // calorias acumuladas nesta refeição
     const slotFoods: DietFood[] = [];
 
     // Determinar proporção de macros para este slot (ex: café mais carbo, almoço mais均衡)
@@ -129,7 +129,7 @@ export function generateDietGreedy(config: DietGenerationConfig): GeneratedDiet 
         grams: proteinGrams,
         mealSlot: slot,
       });
-      slotCalories += proteinCal;
+      currentSlotCalories += proteinCal;
     }
 
     // Selecionar carboidrato
@@ -158,7 +158,7 @@ export function generateDietGreedy(config: DietGenerationConfig): GeneratedDiet 
         grams: carbGrams,
         mealSlot: slot,
       });
-      slotCalories += carbCal;
+      currentSlotCalories += carbCal;
     }
 
     // Selecionar gordura
@@ -177,7 +177,7 @@ export function generateDietGreedy(config: DietGenerationConfig): GeneratedDiet 
         grams: fatGrams,
         mealSlot: slot,
       });
-      slotCalories += fatCal;
+      currentSlotCalories += fatCal;
     }
 
     // Adicionar vegetais (livre, quase sem calorias) - pelo menos 50g
@@ -191,7 +191,7 @@ export function generateDietGreedy(config: DietGenerationConfig): GeneratedDiet 
         grams: vegGrams,
         mealSlot: slot,
       });
-      slotCalories += vegCal;
+      currentSlotCalories += vegCal;
     }
 
     // Acumular totais
