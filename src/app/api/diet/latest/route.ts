@@ -28,6 +28,7 @@ export async function GET(req: NextRequest) {
     // Formatar resposta
     const formattedFoods = diet.foods.map(df => ({
       foodId: df.foodId,
+      mealSlot: df.mealSlot,
       name: df.food.name,
       category: df.food.category,
       grams: df.grams,
@@ -40,7 +41,7 @@ export async function GET(req: NextRequest) {
 
     // Calcular totais
     let totalCal = 0, totalP = 0, totalF = 0, totalC = 0, totalFib = 0;
-    formattedFoods.forEach((f: any) => {
+    formattedFoods.forEach((f) => {
       totalCal += f.calories;
       totalP += f.protein;
       totalF += f.fat;

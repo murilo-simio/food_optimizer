@@ -1,8 +1,115 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { calculateNutrition } from "@/lib/calculators";
+import type { CalculatorInput } from "@/lib/calculators/types";
 import { generateDietGreedy, DietGenerationConfig } from "@/lib/diet-builder";
-import { optimizeDietCost, OptimizerConfig } from "@/lib/optimizer";
+import {
+  distributeCaloriesBySlot,
+  optimizeDietCost,
+  OptimizerConfig,
+} from "@/lib/optimizer";
+
+interface DietFoodLike {
+  foodId: string;
+  grams: number;
+  mealSlot: string;
+  food: {
+    category: string;
+    caloriesKcal: number;
+    proteinG: number;
+    fatG: number;
+    carbsG: number;
+    fiberG: number | null;
+  };
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
+function calculateDietTotals<T extends DietFoodLike>(foods: T[]) {
+  return foods.reduce(
+    (totals, item) => {
+      totals.totalCalories += (item.grams / 100) * item.food.caloriesKcal;
+      totals.totalProteinG += (item.grams / 100) * item.food.proteinG;
+      totals.totalFatG += (item.grams / 100) * item.food.fatG;
+      totals.totalCarbsG += (item.grams / 100) * item.food.carbsG;
+      totals.totalFiberG += (item.grams / 100) * (item.food.fiberG || 0);
+      return totals;
+    },
+    {
+      totalCalories: 0,
+      totalProteinG: 0,
+      totalFatG: 0,
+      totalCarbsG: 0,
+      totalFiberG: 0,
+    }
+  );
+}
+
+function normalizeDietFoodsToTargets<T extends DietFoodLike>(
+  foods: T[],
+  targets: {
+    targetCalories: number;
+    targetProteinG: number;
+    targetFatG: number;
+    targetCarbsG: number;
+    targetFiberG: number;
+  }
+) {
+  let normalizedFoods = foods.map((food) => ({
+    ...food,
+    grams: Math.max(1, Math.round(food.grams)),
+  }));
+
+  for (let iteration = 0; iteration < 3; iteration++) {
+    const totals = calculateDietTotals(normalizedFoods);
+    const proteinScale =
+      totals.totalProteinG > 0
+        ? clamp(targets.targetProteinG / totals.totalProteinG, 0.25, 4)
+        : 1;
+    const carbScale =
+      totals.totalCarbsG > 0
+        ? clamp(targets.targetCarbsG / totals.totalCarbsG, 0.25, 4)
+        : 1;
+    const fatScale =
+      totals.totalFatG > 0
+        ? clamp(targets.targetFatG / totals.totalFatG, 0.25, 4)
+        : 1;
+
+    normalizedFoods = normalizedFoods.map((food) => {
+      const { category } = food.food;
+
+      if (category === "proteina" || category === "lacteo" || category === "suplemento") {
+        return {
+          ...food,
+          grams: Math.max(1, Math.round(food.grams * proteinScale)),
+        };
+      }
+
+      if (category === "carboidrato" || category === "fruta") {
+        return {
+          ...food,
+          grams: Math.max(1, Math.round(food.grams * carbScale)),
+        };
+      }
+
+      if (category === "gordura") {
+        return {
+          ...food,
+          grams: Math.max(1, Math.round(food.grams * fatScale)),
+        };
+      }
+
+      return food;
+    });
+  }
+
+  return {
+    foods: normalizedFoods,
+    totals: calculateDietTotals(normalizedFoods),
+  };
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -43,23 +150,23 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. Calcular necessidades nutricionais
-    const calculatorInput = {
+    const calculatorInput: CalculatorInput = {
       profile: {
         age: profile.age,
         sex: profile.sex,
         heightCm: profile.heightCm,
         weightKg: profile.weightKg,
-        bodyFatPercentage: profile.bodyFatPercentage,
-        country: profile.country,
-        state: profile.state,
-        city: profile.city,
+        bodyFatPercentage: profile.bodyFatPercentage ?? undefined,
+        country: profile.country ?? undefined,
+        state: profile.state ?? undefined,
+        city: profile.city ?? undefined,
       },
       activity: {
         activityLevel: profile.activityLevel,
         exerciseFrequencyDays: profile.exerciseFrequency,
-        primaryExerciseType: profile.primaryExerciseType,
-        exerciseDurationMin: profile.exerciseDurationMin,
-        exerciseIntensity: profile.exerciseIntensity,
+        primaryExerciseType: profile.primaryExerciseType ?? undefined,
+        exerciseDurationMin: profile.exerciseDurationMin ?? undefined,
+        exerciseIntensity: profile.exerciseIntensity ?? undefined,
       },
       work: {
         workRoutine: profile.workRoutine,
@@ -89,7 +196,7 @@ export async function POST(req: NextRequest) {
     const config: DietGenerationConfig = {
       profile,
       nutrition: nutrition.metrics,
-      tasteProfile: tasteProfile as any,
+      tasteProfile,
       availableFoods,
       mealSlots: ["cafe_manha", "almoco", "jantar", "lanche1", "lanche2"],
     };
@@ -122,6 +229,7 @@ export async function POST(req: NextRequest) {
         preferFoods: tasteProfile?.stapleFoods
           ? JSON.parse(tasteProfile.stapleFoods as string)
           : [],
+        priceMap,
       };
 
       const optimized = optimizeDietCost(optimizerConfig);
@@ -141,6 +249,33 @@ export async function POST(req: NextRequest) {
       diet.notes.push("Custo não calculado — preços indisponíveis no banco.");
     }
 
+    const normalizedDiet = normalizeDietFoodsToTargets(diet.foods, nutrition.metrics);
+    const recalculatedEstimatedCost =
+      priceMap.size > 0
+        ? normalizedDiet.foods.reduce((total, item) => {
+            const pricePer100g = priceMap.get(item.foodId) ?? 0;
+            return total + (item.grams / 100) * pricePer100g;
+          }, 0)
+        : null;
+
+    diet = {
+      ...diet,
+      foods: normalizedDiet.foods,
+      totalCalories: Math.round(normalizedDiet.totals.totalCalories),
+      totalProteinG: Math.round(normalizedDiet.totals.totalProteinG),
+      totalFatG: Math.round(normalizedDiet.totals.totalFatG),
+      totalCarbsG: Math.round(normalizedDiet.totals.totalCarbsG),
+      totalFiberG: Math.round(normalizedDiet.totals.totalFiberG),
+      estimatedCost:
+        recalculatedEstimatedCost !== null
+          ? Math.round(recalculatedEstimatedCost * 100) / 100
+          : diet.estimatedCost,
+      notes: [
+        ...diet.notes,
+        `Macros finais aproximados: P ${Math.round(normalizedDiet.totals.totalProteinG)}g, C ${Math.round(normalizedDiet.totals.totalCarbsG)}g, G ${Math.round(normalizedDiet.totals.totalFatG)}g.`,
+      ],
+    };
+
     // 7. Salvar dieta no banco
     const savedDiet = await prisma.diet.create({
       data: {
@@ -152,7 +287,7 @@ export async function POST(req: NextRequest) {
         totalProteinG: diet.totalProteinG,
         totalFatG: diet.totalFatG,
         totalCarbsG: diet.totalCarbsG,
-        estimatedCost: null, // será calculado depois com preços
+        estimatedCost: diet.estimatedCost,
         context: JSON.stringify({
           targetCalories: nutrition.metrics.targetCalories,
           targetProteinG: nutrition.metrics.targetProteinG,
@@ -176,6 +311,7 @@ export async function POST(req: NextRequest) {
       diet: savedDiet,
       foods: diet.foods.map(df => ({
         foodId: df.foodId,
+        mealSlot: df.mealSlot,
         name: df.food.name,
         category: df.food.category,
         grams: df.grams,

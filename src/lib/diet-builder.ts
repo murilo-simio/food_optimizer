@@ -228,7 +228,7 @@ export function generateDietGreedy(config: DietGenerationConfig): GeneratedDiet 
   }
 
   // 7. Estimar custo (se houver preços)
-  let estimatedCost: number | null = null;
+  const estimatedCost: number | null = null;
   // Por enquanto, null. O passo 3 (simplex) calculará custo otimizado
 
   const notes: string[] = [];

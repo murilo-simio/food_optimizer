@@ -1,5 +1,6 @@
 "use client";
 
+import type { UserProfile } from "@prisma/client";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -11,7 +12,7 @@ export default function DashboardPage() {
 	const { data: session, status } = useSession();
 	const router = useRouter();
 	const [onboardingComplete, setOnboardingComplete] = useState(false);
-	const [profile, setProfile] = useState<any>(null);
+	const [profile, setProfile] = useState<UserProfile | null>(null);
 
 	useEffect(() => {
 		if (status === "loading" || !session?.user?.id) return;

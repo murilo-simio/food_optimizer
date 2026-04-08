@@ -14,6 +14,8 @@ export interface FoodQuantity {
   mealSlot: string;
 }
 
+type SlotFoodSelection = Omit<FoodQuantity, "mealSlot">;
+
 export interface DietSolution {
   totalCalories: number;
   totalProteinG: number;
@@ -44,6 +46,7 @@ export interface OptimizerConfig {
   };
   excludeFoods?: string[]; // IDs de alimentos a excluir
   preferFoods?: string[]; // IDs de alimentos a priorizar
+  priceMap?: Map<string, number>; // preço por 100g indexado por foodId
 }
 
 /**
@@ -70,10 +73,13 @@ export function optimizeDietCost(config: OptimizerConfig): OptimizedDiet {
     constraints,
     excludeFoods = [],
     preferFoods = [],
+    priceMap,
   } = config;
 
   // 1. Filtrar alimentos excluídos
-  let candidateFoods = availableFoods.filter(f => !excludeFoods.includes(f.id));
+  const excludedFoodIds = resolveFoodIds(availableFoods, excludeFoods);
+  const candidateFoods = availableFoods.filter(f => !excludedFoodIds.includes(f.id));
+  const preferredFoodIds = resolveFoodIds(candidateFoods, preferFoods);
 
   // 2. Dividir por categoria
   const categories = {
@@ -100,7 +106,8 @@ export function optimizeDietCost(config: OptimizerConfig): OptimizedDiet {
       targetFatG: targetFSlot,
       targetCarbsG: targetCSlot,
       categories,
-      preferFoods,
+      preferFoods: preferredFoodIds,
+      priceMap,
     });
 
     // Adicionar à solução
@@ -115,7 +122,7 @@ export function optimizeDietCost(config: OptimizerConfig): OptimizedDiet {
       totalF += (sf.grams / 100) * sf.food.fatG;
       totalC += (sf.grams / 100) * sf.food.carbsG;
       totalFib += (sf.grams / 100) * (sf.food.fiberG || 0);
-      totalCost += (sf.grams / 100) * (getFoodPrice(sf.food) || 0);
+      totalCost += (sf.grams / 100) * (getFoodPrice(sf.food, priceMap) || 0);
     }
   }
 
@@ -143,7 +150,7 @@ export function optimizeDietCost(config: OptimizerConfig): OptimizedDiet {
       totalF += (f.grams / 100) * f.food.fatG;
       totalC += (f.grams / 100) * f.food.carbsG;
       totalFib += (f.grams / 100) * (f.food.fiberG || 0);
-      totalCost += (f.grams / 100) * (getFoodPrice(f.food) || 0);
+      totalCost += (f.grams / 100) * (getFoodPrice(f.food, priceMap) || 0);
     }
   }
 
@@ -187,16 +194,25 @@ function selectFoodsForSlot(params: {
   targetCarbsG: number;
   categories: Record<string, Food[]>;
   preferFoods: string[];
-}): FoodQuantity[] {
-  const { targetCalories, targetProteinG, targetFatG, targetCarbsG, categories, preferFoods } = params;
+  priceMap?: Map<string, number>;
+}): SlotFoodSelection[] {
+  const {
+    targetCalories,
+    targetProteinG,
+    targetFatG,
+    targetCarbsG,
+    categories,
+    preferFoods,
+    priceMap,
+  } = params;
 
-  const result: FoodQuantity[] = [];
+  const result: SlotFoodSelection[] = [];
   let remainingCal = targetCalories;
 
   // Proteína
   const proteinTarget = targetProteinG;
   let proteinUsed = 0;
-  const proteinSource = selectBestProtein(categories.proteina, preferFoods);
+  const proteinSource = selectBestProtein(categories.proteina, preferFoods, priceMap);
   if (proteinSource) {
     const gramsNeeded = (proteinTarget * 100) / proteinSource.proteinG; // grams needed for target
     const grams = Math.min(gramsNeeded, remainingCal * 0.4 / (proteinSource.caloriesKcal / 100)); // não mais que 40% das calorias
@@ -211,7 +227,7 @@ function selectFoodsForSlot(params: {
 
   // Carboidrato
   const carbTarget = targetCarbsG;
-  const carbSource = selectBestCarb(categories.carboidrato, preferFoods);
+  const carbSource = selectBestCarb(categories.carboidrato, preferFoods, priceMap);
   if (carbSource) {
     const gramsNeeded = (carbTarget * 100) / carbSource.carbsG;
     const grams = Math.min(gramsNeeded, remainingCal * 0.6 / (carbSource.caloriesKcal / 100));
@@ -253,57 +269,82 @@ function selectFoodsForSlot(params: {
 /**
  * Seleciona melhor proteína baseada em custo por grama de proteína
  */
-function selectBestProtein(proteins: Food[], preferFoods: string[]): Food | null {
+function selectBestProtein(
+  proteins: Food[],
+  preferFoods: string[],
+  priceMap?: Map<string, number>
+): Food | null {
   if (proteins.length === 0) return null;
 
   // Priorizar alimentos preferidos
   const preferred = proteins.filter(f => preferFoods.includes(f.id));
   if (preferred.length > 0) {
-    return preferBestByCostPerProtein(preferred);
+    return preferBestByCostPerProtein(preferred, priceMap);
   }
 
-  return preferBestByCostPerProtein(proteins);
+  return preferBestByCostPerProtein(proteins, priceMap);
 }
 
 /**
  * Seleciona melhor carboidrato baseada em custo por grama de carboidrato
  */
-function selectBestCarb(carbs: Food[], preferFoods: string[]): Food | null {
+function selectBestCarb(
+  carbs: Food[],
+  preferFoods: string[],
+  priceMap?: Map<string, number>
+): Food | null {
   if (carbs.length === 0) return null;
 
   const preferred = carbs.filter(f => preferFoods.includes(f.id));
   if (preferred.length > 0) {
-    return preferBestByCostPerCarb(preferred);
+    return preferBestByCostPerCarb(preferred, priceMap);
   }
 
-  return preferBestByCostPerCarb(carbs);
+  return preferBestByCostPerCarb(carbs, priceMap);
 }
 
 /**
  * Preferencia por custo por nutriente (menor é melhor)
  */
-function preferBestByCostPerProtein(foods: Food[]): Food {
+function preferBestByCostPerProtein(
+  foods: Food[],
+  priceMap?: Map<string, number>
+): Food {
   return foods
     .filter(f => f.proteinG > 5) // pelo menos 5g de proteína
     .sort((a, b) => {
-      const priceA = getFoodPrice(a) || Infinity;
-      const priceB = getFoodPrice(b) || Infinity;
+      const priceA = getFoodPrice(a, priceMap) || Infinity;
+      const priceB = getFoodPrice(b, priceMap) || Infinity;
       const costPerProteinA = priceA / a.proteinG;
       const costPerProteinB = priceB / b.proteinG;
       return costPerProteinA - costPerProteinB;
     })[0] || foods[0];
 }
 
-function preferBestByCostPerCarb(foods: Food[]): Food {
+function preferBestByCostPerCarb(
+  foods: Food[],
+  priceMap?: Map<string, number>
+): Food {
   return foods
     .filter(f => f.carbsG > 10) // pelo menos 10g de carboidrato
     .sort((a, b) => {
-      const priceA = getFoodPrice(a) || Infinity;
-      const priceB = getFoodPrice(b) || Infinity;
+      const priceA = getFoodPrice(a, priceMap) || Infinity;
+      const priceB = getFoodPrice(b, priceMap) || Infinity;
       const costPerCarbA = priceA / a.carbsG;
       const costPerCarbB = priceB / b.carbsG;
       return costPerCarbA - costPerCarbB;
     })[0] || foods[0];
+}
+
+function resolveFoodIds(foods: Food[], identifiers: string[]): string[] {
+  const normalizedIdentifiers = identifiers.map(identifier => identifier.trim().toLowerCase());
+
+  return foods
+    .filter(food =>
+      normalizedIdentifiers.includes(food.id.toLowerCase()) ||
+      normalizedIdentifiers.includes(food.name.toLowerCase())
+    )
+    .map(food => food.id);
 }
 
 /**
@@ -315,7 +356,7 @@ export function getFoodPrice(
   priceMap?: Map<string, number>
 ): number | null {
   if (priceMap && priceMap.has(food.id)) {
-    return priceMap.get(food.id);
+    return priceMap.get(food.id) ?? null;
   }
   return null;
 }
