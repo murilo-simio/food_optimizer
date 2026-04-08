@@ -8,6 +8,17 @@
 ---
 ## [Desenvolvimento] - 2026-04-08
 
+### 🎯 Funcionalidades
+
+- `src/app/(app)/dieta/page.tsx`, `src/app/(app)/log/page.tsx`, `src/app/(app)/perfil/page.tsx` e `src/app/(app)/chat/page.tsx`: adicionadas rotas em português para a navegação principal e criada a tela placeholder de chat.
+- `src/lib/navigation.test.ts`: adicionados testes unitários para garantir a ordem da navegação e o mapeamento correto das rotas canônicas e legadas.
+
+### 🎨 Melhorias
+
+- `src/components/ui/bottom-nav.tsx` e `src/lib/navigation.ts`: navbar inferior expandida para `Dieta`, `Chat`, `Dashboard`, `Log` e `Perfil`, com rotas canônicas em português e compatibilidade de estado ativo com os caminhos antigos.
+
+## [Desenvolvimento] - 2026-04-08
+
 ### 🎨 Melhorias
 
 - `src/lib/calculators/index.ts` e `src/lib/calculators/adapters.ts`: centralizada a montagem de `CalculatorInput` e restauradas no fluxo principal as notas explícitas de micronutrientes climáticos, incluindo clima frio e exercício intenso.
