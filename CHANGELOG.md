@@ -17,6 +17,10 @@
 
 - `src/components/ui/bottom-nav.tsx` e `src/lib/navigation.ts`: navbar inferior expandida para `Dieta`, `Chat`, `Dashboard`, `Log` e `Perfil`, com rotas canônicas em português e compatibilidade de estado ativo com os caminhos antigos.
 
+### 🐛 Correções
+
+- `src/app/layout.tsx` e `src/app/layout.test.ts`: `RootLayout` agora suprime hydration mismatch no `<body>` para tolerar atributos injetados pelo cliente antes da hidratação, como extensões que adicionam `data-rm-theme`.
+
 ## [Desenvolvimento] - 2026-04-08
 
 ### 🎨 Melhorias
