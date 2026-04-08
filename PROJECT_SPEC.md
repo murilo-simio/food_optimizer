@@ -155,6 +155,14 @@ Visualização:
 | Charts | Recharts | Leve, funciona bem em mobile |
 | Ícones | Lucide React | Minimalista, consistente |
 
+## Qualidade e Processo
+
+- **TDD como padrão** para cálculo nutricional, otimização de dieta, scraping, parsing e regressões de bugs.
+- Toda mudança de regra deve nascer de um teste unitário que descreva o comportamento esperado.
+- Correções devem incluir teste de regressão para impedir reintrodução do erro.
+- Rotas e componentes com lógica relevante devem extrair regras para funções puras em `src/lib/` ou módulos equivalentes, facilitando cobertura unitária.
+- A baseline de validação local do projeto passa por `npm run test` e `npm run lint`.
+
 ## Estrutura de Diretórios (prevista)
 
 ```

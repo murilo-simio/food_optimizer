@@ -22,7 +22,12 @@
       "Bash(\"C:\\\\dev\\\\food_optimizer\\\\src\\\\app\\\\\\(app\\)\\\\tracking\\\\page.tsx\")",
       "Bash(npm run:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(curl -s -X POST http://localhost:3000/api/onboarding -H \"Content-Type: application/json\" -d '{\"\"\"\"userId\"\"\"\":\"\"\"\"test123\"\"\"\",\"\"\"\"age\"\"\"\":25,\"\"\"\"sex\"\"\"\":\"\"\"\"MALE\"\"\"\",\"\"\"\"heightCm\"\"\"\":175,\"\"\"\"weightKg\"\"\"\":70,\"\"\"\"activityLevel\"\"\"\":\"\"\"\"MODERATE\"\"\"\",\"\"\"\"exerciseFrequency\"\"\"\":4,\"\"\"\"mealsPerDay\"\"\"\":3,\"\"\"\"workRoutine\"\"\"\":\"\"\"\"CLT_9_TO_5\"\"\"\",\"\"\"\"dietaryRestrictions\"\"\"\":\"\"\"\"NONE\"\"\"\",\"\"\"\"goal\"\"\"\":\"\"\"\"MUSCLE_GAIN\"\"\"\"}')",
+      "Bash(wc:*)",
+      "Bash(sed:*)",
+      "Bash(node prisma/seed.js)",
+      "Bash(node:*)"
     ]
   }
 }

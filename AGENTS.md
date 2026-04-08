@@ -105,12 +105,22 @@ interface UserInput {
 - Commits pequenos e atômicos. Uma feature = um ou mais commits, nunca misturar features.
 - **Nunca force push** em main.
 
+## TDD (obrigatório)
+
+- Toda alteração de regra de negócio deve começar com um teste que falha para o comportamento esperado.
+- Toda correção de bug deve incluir um teste de regressão cobrindo o cenário quebrado antes ou junto do fix.
+- Siga o ciclo **Red -> Green -> Refactor**: teste falhando, implementação mínima para passar, refatoração segura.
+- Priorize testes unitários para lógica em `src/lib/`; se uma rota ou componente concentrar regra demais, extraia a lógica para uma função testável.
+- Antes de concluir uma tarefa, rode pelo menos `npm run test`. Quando a mudança tocar tipos, lint ou contratos públicos, rode também `npm run lint`.
+
 ## Testes (quando aplicável)
 
 - Para lógica de negócio (cálculos nutricionais, otimizador): unit tests.
 - Para UI: testes focam em comportamento interacional, não em snapshots.
 - Scraper tests: mock de HTTP, nunca chamar URLs reais em CI.
 - IA: mock de chamadas OpenRouter — nunca gastar créditos de API em testes.
+- Novos módulos sem cobertura mínima de comportamento principal não devem ser considerados concluídos.
+- Scripts principais de teste: `npm run test`, `npm run test:watch`, `npm run test:coverage`.
 
 ## Documentos de Referência
 

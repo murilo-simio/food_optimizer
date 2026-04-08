@@ -7,6 +7,38 @@
 
 ---
 
+## [Desenvolvimento] - 2026-04-08
+
+### 🎯 Funcionalidades
+
+- `src/lib/calculators/index.test.ts`, `src/lib/calculators/micronutrients.test.ts`, `src/lib/diet-builder.test.ts` e `src/lib/optimizer.test.ts`: adicionada suíte inicial de testes unitários cobrindo cálculo nutricional, micronutrientes, geração gulosa de dieta e otimização por custo.
+- `src/lib/optimizer.ts`: adicionados suporte a `priceMap` e resolução de preferências/aversões por nome ou ID para permitir testes reais de otimização por custo e alinhar o comportamento com os dados vindos do perfil do usuário.
+
+### ⚙️ Configuração
+
+- `package.json` e `vitest.config.ts`: configurado `Vitest` com scripts `test`, `test:watch` e `test:coverage` para tornar a execução de testes parte do fluxo padrão do projeto.
+
+### 📦 Estrutura
+
+- `src/test/factories.ts`: criado conjunto de factories tipadas para montar fixtures consistentes de `Food`, `UserProfile` e `TasteProfile` nos testes.
+
+### 🎨 Melhorias
+
+- `src/app/api/diet/generate/route.ts`, `src/app/(app)/dashboard/page.tsx`, `src/lib/diet-builder.ts` e `prisma/seed-prices.js`: removidos pontos de atrito de lint/type safety para manter a base coerente com o novo fluxo orientado a testes.
+- `AGENTS.md`, `README.md` e `PROJECT_SPEC.md`: documentado o processo TDD como padrão de desenvolvimento do projeto.
+
+## [Desenvolvimento] - 2026-04-08
+
+### 🐛 Correções
+
+- `src/app/api/diet/generate/route.ts`: adicionada a importação de `distributeCaloriesBySlot` para corrigir o `ReferenceError` no `POST /api/diet/generate` ao otimizar a dieta por custo.
+- `src/app/(app)/diet/page.tsx`: corrigida a renderização da tela `/diet` para consumir o payload real da API com tipagem explícita, sem acessar `item.food` inexistente.
+- `src/app/api/diet/generate/route.ts` e `src/app/api/diet/latest/route.ts`: incluído `mealSlot` nos alimentos retornados e persistido `estimatedCost` ao salvar a dieta gerada.
+- `src/app/api/diet/generate/route.ts`: normalizados campos opcionais do perfil (`null` → `undefined`) para compatibilizar a chamada de `calculateNutrition` com o tipo `CalculatorInput`.
+- `src/app/api/diet/generate/route.ts`: adicionada uma normalização final dos alimentos gerados para aproximar os macros da dieta às metas calculadas do perfil antes de salvar e retornar o resultado.
+- `src/lib/optimizer.ts`: separado o tipo interno de seleção de alimentos do tipo final com `mealSlot` para corrigir a tipagem do build sem alterar a lógica do otimizador.
+- `prisma/seed.ts`: corrigido o `catch` com `Prisma.PrismaClientKnownRequestError` para eliminar a falha de typecheck no build.
+
 ## [Desenvolvimento] - 2026-04-07
 
 ### 🎯 Fase 2.2 - Montador de Dieta (Passo 2)

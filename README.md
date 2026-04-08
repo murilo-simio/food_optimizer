@@ -71,3 +71,25 @@ npm install
 npx prisma migrate dev
 npm run dev
 ```
+
+## Testes e TDD
+
+O projeto adota **TDD** para lógica de negócio e correções de bugs. O fluxo esperado é:
+
+1. escrever um teste que falha para o comportamento desejado
+2. implementar o mínimo para fazê-lo passar
+3. refatorar com a suíte verde
+
+Comandos principais:
+
+```bash
+npm run test
+npm run test:watch
+npm run test:coverage
+```
+
+Regras práticas:
+
+- mudanças em `src/lib/` devem sair com testes unitários relevantes
+- bugs corrigidos devem ganhar teste de regressão
+- antes de encerrar uma tarefa, a suíte deve estar verde

@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -393,7 +393,10 @@ async function main() {
         createdCount++;
       } catch (error) {
         // Se já existir (unique constraint), ignora
-        if (error.code === "P2002") {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2002"
+        ) {
           skippedCount++;
         } else {
           throw error;
