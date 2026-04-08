@@ -6,6 +6,32 @@
 > Este arquivo documenta todas as mudanças no código. Mudanças devem ser adicionadas em ordem cronológica (mais recente no topo). Cada agente de IA deve registrar suas alterações aqui antes de finalizar.
 
 ---
+## [Desenvolvimento] - 2026-04-08
+
+### 🎨 Melhorias
+
+- `src/lib/calculators/index.ts` e `src/lib/calculators/adapters.ts`: centralizada a montagem de `CalculatorInput` e restauradas no fluxo principal as notas explícitas de micronutrientes climáticos, incluindo clima frio e exercício intenso.
+- `src/lib/diets.ts`, `src/app/api/diet/generate/route.ts` e `src/app/api/diet/latest/route.ts`: extraídos helpers compartilhados de totais, normalização, custo e formatação da dieta para reduzir duplicação entre rotas.
+
+### 🎯 Funcionalidades
+
+- `src/lib/calculators/adapters.test.ts` e `src/lib/diets.test.ts`: adicionados testes unitários para os novos adapters e helpers de dieta, mantendo cobertura sobre a refatoração estrutural.
+
+## [Desenvolvimento] - 2026-04-08
+
+### 🎯 Funcionalidades
+
+- `src/app/(app)/dashboard/page.tsx`: dashboard agora mostra a refeição correspondente ao horário atual, permite marcar a refeição como feita ou pulada, recalcula os cards de calorias/macros restantes e persiste esse estado por dia com reset automático à meia-noite.
+- `src/app/(app)/dashboard/page.tsx`: ações de `Pular refeição` e `Refeição feita` agora pedem confirmação em dialog e, após confirmar, o card avança imediatamente para a próxima refeição pendente do dia.
+
+## [Desenvolvimento] - 2026-04-08
+
+### 🎨 Melhorias
+
+- `src/lib/calculators/index.ts`, `src/lib/calculators/macros.ts`, `src/lib/calculators/micronutrients.ts` e `src/lib/calculators/climate.ts`: consolidada a orquestração das calculadoras para reutilizar os módulos especializados já existentes, remover lógica duplicada e usar o cálculo real de micronutrientes no fluxo principal.
+- `src/lib/meal-planning.ts`, `src/lib/diet-builder.ts` e `src/lib/optimizer.ts`: extraída a lógica compartilhada de distribuição de calorias/macros por refeição e simplificados os módulos de dieta para reduzir drift entre o montador guloso e o otimizador.
+- `src/lib/diet-builder.ts`: reforçado o parsing de preferências alimentares e corrigido o filtro de restrições vegetarianas/veganas para ficar mais previsível e menos frágil a precedência de operadores.
+- `eslint.config.mjs`: adicionado ignore para `coverage/` para manter o lint limpo mesmo após geração local de relatórios de teste.
 
 ## [Desenvolvimento] - 2026-04-08
 

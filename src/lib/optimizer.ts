@@ -1,4 +1,6 @@
-import { Food } from "@prisma/client";
+import type { Food } from "@prisma/client";
+
+import { distributeCaloriesBySlot, getMacroTargetsForSlot } from "./meal-planning";
 
 /**
  * Representa uma solução de otimização de dieta
@@ -15,6 +17,15 @@ export interface FoodQuantity {
 }
 
 type SlotFoodSelection = Omit<FoodQuantity, "mealSlot">;
+
+interface NutritionTotals {
+  calories: number;
+  protein: number;
+  fat: number;
+  carbs: number;
+  fiber: number;
+  cost: number;
+}
 
 export interface DietSolution {
   totalCalories: number;
@@ -36,157 +47,121 @@ export interface OptimizerConfig {
   targetCarbsG: number;
   targetFiberG: number;
   mealSlots: string[];
-  slotCalories: Record<string, number>; // calorias por refeição
+  slotCalories: Record<string, number>;
   constraints: {
-    protein: [number, number]; // [min%, max%] ex: [0.9, 1.1] = ±10%
+    protein: [number, number];
     fat: [number, number];
     carbs: [number, number];
-    fiber: [number, number]; // min%
-    costWeight: number; // 0-1, importância do custo (0=ignorar, 1=só custo)
+    fiber: [number, number];
+    costWeight: number;
   };
-  excludeFoods?: string[]; // IDs de alimentos a excluir
-  preferFoods?: string[]; // IDs de alimentos a priorizar
-  priceMap?: Map<string, number>; // preço por 100g indexado por foodId
+  excludeFoods?: string[];
+  preferFoods?: string[];
+  priceMap?: Map<string, number>;
 }
 
 /**
- * Algoritmo de otimização por custo usando approached de "cost per nutrient"
- *
- * Estratégia:
- * 1. Para cada mealSlot, selecionar alimentos que minimizem custo por kcal
- * 2. Ajustar quantidades para atingir macros do slot
- * 3.iterar até convergir (ou limite de iterações)
- * 4. Garantir restrições de variedade (mínimo 3 categorias)
- *
- * Nota: Este é um solver simplificado. Para Fase 3+ podemos integrar biblioteca de LP.
+ * Algoritmo de otimização por custo usando heuristic de "cost per nutrient"
  */
 export function optimizeDietCost(config: OptimizerConfig): OptimizedDiet {
   const {
     availableFoods,
-    targetCalories,
     targetProteinG,
     targetFatG,
     targetCarbsG,
-    targetFiberG,
     mealSlots,
     slotCalories,
-    constraints,
     excludeFoods = [],
     preferFoods = [],
     priceMap,
   } = config;
 
-  // 1. Filtrar alimentos excluídos
   const excludedFoodIds = resolveFoodIds(availableFoods, excludeFoods);
-  const candidateFoods = availableFoods.filter(f => !excludedFoodIds.includes(f.id));
+  const candidateFoods = availableFoods.filter(food => !excludedFoodIds.includes(food.id));
   const preferredFoodIds = resolveFoodIds(candidateFoods, preferFoods);
 
-  // 2. Dividir por categoria
   const categories = {
-    proteina: candidateFoods.filter(f => f.category === "proteina" || f.category === "lacteo"),
-    carboidrato: candidateFoods.filter(f => f.category === "carboidrato" || f.category === "fruta"),
-    gordura: candidateFoods.filter(f => f.category === "gordura"),
-    verdura: candidateFoods.filter(f => f.category === "verdura"),
+    proteina: candidateFoods.filter(food => food.category === "proteina" || food.category === "lacteo"),
+    carboidrato: candidateFoods.filter(food => food.category === "carboidrato" || food.category === "fruta"),
+    gordura: candidateFoods.filter(food => food.category === "gordura"),
+    verdura: candidateFoods.filter(food => food.category === "verdura"),
   };
 
-  // 3. Para cada slot, construir refeição otimizada por custo
   const allFoods: FoodQuantity[] = [];
-  let totalCal = 0, totalP = 0, totalF = 0, totalC = 0, totalFib = 0, totalCost = 0;
 
   for (const slot of mealSlots) {
-    const targetCalSlot = slotCalories[slot];
-    if (targetCalSlot <= 0) continue;
+    const targetCaloriesForSlot = slotCalories[slot];
+    if (targetCaloriesForSlot <= 0) {
+      continue;
+    }
 
-    const [targetPSlot, targetFSlot, targetCSlot] = getMacroDistributionForSlot(slot, targetCalSlot);
+    const [targetProteinForSlot, targetFatForSlot, targetCarbsForSlot] =
+      getMacroTargetsForSlot(slot, targetCaloriesForSlot);
 
-    // Selecionar alimentos para este slot
     const slotFoods = selectFoodsForSlot({
-      targetCalories: targetCalSlot,
-      targetProteinG: targetPSlot,
-      targetFatG: targetFSlot,
-      targetCarbsG: targetCSlot,
+      targetCalories: targetCaloriesForSlot,
+      targetProteinG: targetProteinForSlot,
+      targetFatG: targetFatForSlot,
+      targetCarbsG: targetCarbsForSlot,
       categories,
       preferFoods: preferredFoodIds,
       priceMap,
     });
 
-    // Adicionar à solução
-    for (const sf of slotFoods) {
+    for (const slotFood of slotFoods) {
       allFoods.push({
-        ...sf,
+        ...slotFood,
         mealSlot: slot,
       });
-      const cal = (sf.grams / 100) * sf.food.caloriesKcal;
-      totalCal += cal;
-      totalP += (sf.grams / 100) * sf.food.proteinG;
-      totalF += (sf.grams / 100) * sf.food.fatG;
-      totalC += (sf.grams / 100) * sf.food.carbsG;
-      totalFib += (sf.grams / 100) * (sf.food.fiberG || 0);
-      totalCost += (sf.grams / 100) * (getFoodPrice(sf.food, priceMap) || 0);
     }
   }
 
-  // 4. Ajustar para garantir constraints de macros (dentro de ±5%)
-  const proteinRatio = totalP / targetProteinG;
-  const fatRatio = totalF / targetFatG;
-  const carbsRatio = totalC / targetCarbsG;
+  let totals = recalculateTotals(allFoods, priceMap);
 
-  // Se fora dos limites, ajustar scaling
+  const proteinRatio = totals.protein / targetProteinG;
+  const fatRatio = totals.fat / targetFatG;
+  const carbsRatio = totals.carbs / targetCarbsG;
+
   const adjustScale = Math.max(
     0.95 / Math.min(proteinRatio, fatRatio, carbsRatio),
     1.05 / Math.max(proteinRatio, fatRatio, carbsRatio),
-    1.0
+    1
   );
 
-  if (Math.abs(adjustScale - 1.0) > 0.01) {
-    allFoods.forEach(f => {
-      f.grams = Math.round(f.grams * adjustScale);
-    });
-    // Recalcular totais
-    totalCal = 0; totalP = 0; totalF = 0; totalC = 0; totalFib = 0; totalCost = 0;
-    for (const f of allFoods) {
-      totalCal += (f.grams / 100) * f.food.caloriesKcal;
-      totalP += (f.grams / 100) * f.food.proteinG;
-      totalF += (f.grams / 100) * f.food.fatG;
-      totalC += (f.grams / 100) * f.food.carbsG;
-      totalFib += (f.grams / 100) * (f.food.fiberG || 0);
-      totalCost += (f.grams / 100) * (getFoodPrice(f.food, priceMap) || 0);
+  if (Math.abs(adjustScale - 1) > 0.01) {
+    for (const food of allFoods) {
+      food.grams = Math.round(food.grams * adjustScale);
     }
+
+    totals = recalculateTotals(allFoods, priceMap);
   }
 
-  // 5. Verificar variedade de categorias (mínimo 3)
-  const usedCategories = new Set(allFoods.map(f => f.food.category));
+  const usedCategories = new Set(allFoods.map(food => food.food.category));
   if (usedCategories.size < 3) {
-    // Adicionar vegetais (geralmente faltam)
-    const vegFood = categories.verdura[0];
-    if (vegFood && !allFoods.some(f => f.food.category === "verdura")) {
-      const vegGrams = 100;
+    const vegetable = categories.verdura[0];
+    if (vegetable && !allFoods.some(food => food.food.category === "verdura")) {
       allFoods.push({
-        foodId: vegFood.id,
-        food: vegFood,
-        grams: vegGrams,
-        mealSlot: mealSlots[0], // adicionar no primeiro slot
+        foodId: vegetable.id,
+        food: vegetable,
+        grams: 100,
+        mealSlot: mealSlots[0],
       });
-      totalCal += (vegGrams / 100) * vegFood.caloriesKcal;
-      // ... atualizar outros totais
+
+      totals = recalculateTotals(allFoods, priceMap);
     }
   }
 
   return {
     foods: allFoods,
-    totalCalories: Math.round(totalCal),
-    totalProteinG: Math.round(totalP),
-    totalFatG: Math.round(totalF),
-    totalCarbsG: Math.round(totalC),
-    totalFiberG: Math.round(totalFib),
-    totalCost: Math.round(totalCost * 100) / 100,
+    totalCalories: Math.round(totals.calories),
+    totalProteinG: Math.round(totals.protein),
+    totalFatG: Math.round(totals.fat),
+    totalCarbsG: Math.round(totals.carbs),
+    totalFiberG: Math.round(totals.fiber),
+    totalCost: Math.round(totals.cost * 100) / 100,
   };
 }
 
-/**
- * Seleciona alimentos para uma refeição (slot) específica
- * Usa heuristic de menor custo por nutriente
- */
 function selectFoodsForSlot(params: {
   targetCalories: number;
   targetProteinG: number;
@@ -207,118 +182,109 @@ function selectFoodsForSlot(params: {
   } = params;
 
   const result: SlotFoodSelection[] = [];
-  let remainingCal = targetCalories;
+  let remainingCalories = targetCalories;
 
-  // Proteína
-  const proteinTarget = targetProteinG;
-  let proteinUsed = 0;
   const proteinSource = selectBestProtein(categories.proteina, preferFoods, priceMap);
   if (proteinSource) {
-    const gramsNeeded = (proteinTarget * 100) / proteinSource.proteinG; // grams needed for target
-    const grams = Math.min(gramsNeeded, remainingCal * 0.4 / (proteinSource.caloriesKcal / 100)); // não mais que 40% das calorias
+    const gramsNeeded = (targetProteinG * 100) / proteinSource.proteinG;
+    const grams = Math.min(
+      gramsNeeded,
+      (remainingCalories * 0.4) / (proteinSource.caloriesKcal / 100)
+    );
+
     result.push({
       foodId: proteinSource.id,
       food: proteinSource,
       grams: Math.round(grams),
     });
-    remainingCal -= (result[result.length - 1].grams / 100) * proteinSource.caloriesKcal;
-    proteinUsed = (result[result.length - 1].grams / 100) * proteinSource.proteinG;
+    remainingCalories -= (result[result.length - 1].grams / 100) * proteinSource.caloriesKcal;
   }
 
-  // Carboidrato
-  const carbTarget = targetCarbsG;
   const carbSource = selectBestCarb(categories.carboidrato, preferFoods, priceMap);
   if (carbSource) {
-    const gramsNeeded = (carbTarget * 100) / carbSource.carbsG;
-    const grams = Math.min(gramsNeeded, remainingCal * 0.6 / (carbSource.caloriesKcal / 100));
+    const gramsNeeded = (targetCarbsG * 100) / carbSource.carbsG;
+    const grams = Math.min(
+      gramsNeeded,
+      (remainingCalories * 0.6) / (carbSource.caloriesKcal / 100)
+    );
+
     result.push({
       foodId: carbSource.id,
       food: carbSource,
       grams: Math.round(grams),
     });
-    remainingCal -= (result[result.length - 1].grams / 100) * carbSource.caloriesKcal;
+    remainingCalories -= (result[result.length - 1].grams / 100) * carbSource.caloriesKcal;
   }
 
-  // Gordura
-  const fatTarget = targetFatG;
   const fatSource = categories.gordura[0];
   if (fatSource) {
-    const gramsNeeded = (fatTarget * 100) / fatSource.fatG;
-    const grams = Math.min(gramsNeeded, remainingCal * 0.9 / (fatSource.caloriesKcal / 100));
+    const gramsNeeded = (targetFatG * 100) / fatSource.fatG;
+    const grams = Math.min(
+      gramsNeeded,
+      (remainingCalories * 0.9) / (fatSource.caloriesKcal / 100)
+    );
+
     result.push({
       foodId: fatSource.id,
       food: fatSource,
-      grams: Math.round(Math.max(grams, 5)), // pelo menos 5g
+      grams: Math.round(Math.max(grams, 5)),
     });
-    remainingCal -= (result[result.length - 1].grams / 100) * fatSource.caloriesKcal;
+    remainingCalories -= (result[result.length - 1].grams / 100) * fatSource.caloriesKcal;
   }
 
-  // Verdura (opcional, livre)
-  const vegSource = categories.verdura[0];
-  if (vegSource && remainingCal > 50) {
+  const vegetableSource = categories.verdura[0];
+  if (vegetableSource && remainingCalories > 50) {
     result.push({
-      foodId: vegSource.id,
-      food: vegSource,
-      grams: 100, // padrão 100g
+      foodId: vegetableSource.id,
+      food: vegetableSource,
+      grams: 100,
     });
   }
 
   return result;
 }
 
-/**
- * Seleciona melhor proteína baseada em custo por grama de proteína
- */
 function selectBestProtein(
   proteins: Food[],
   preferFoods: string[],
   priceMap?: Map<string, number>
 ): Food | null {
-  if (proteins.length === 0) return null;
-
-  // Priorizar alimentos preferidos
-  const preferred = proteins.filter(f => preferFoods.includes(f.id));
-  if (preferred.length > 0) {
-    return preferBestByCostPerProtein(preferred, priceMap);
+  if (proteins.length === 0) {
+    return null;
   }
 
-  return preferBestByCostPerProtein(proteins, priceMap);
+  const preferred = proteins.filter(food => preferFoods.includes(food.id));
+  return preferred.length > 0
+    ? preferBestByCostPerProtein(preferred, priceMap)
+    : preferBestByCostPerProtein(proteins, priceMap);
 }
 
-/**
- * Seleciona melhor carboidrato baseada em custo por grama de carboidrato
- */
 function selectBestCarb(
   carbs: Food[],
   preferFoods: string[],
   priceMap?: Map<string, number>
 ): Food | null {
-  if (carbs.length === 0) return null;
-
-  const preferred = carbs.filter(f => preferFoods.includes(f.id));
-  if (preferred.length > 0) {
-    return preferBestByCostPerCarb(preferred, priceMap);
+  if (carbs.length === 0) {
+    return null;
   }
 
-  return preferBestByCostPerCarb(carbs, priceMap);
+  const preferred = carbs.filter(food => preferFoods.includes(food.id));
+  return preferred.length > 0
+    ? preferBestByCostPerCarb(preferred, priceMap)
+    : preferBestByCostPerCarb(carbs, priceMap);
 }
 
-/**
- * Preferencia por custo por nutriente (menor é melhor)
- */
 function preferBestByCostPerProtein(
   foods: Food[],
   priceMap?: Map<string, number>
 ): Food {
   return foods
-    .filter(f => f.proteinG > 5) // pelo menos 5g de proteína
-    .sort((a, b) => {
-      const priceA = getFoodPrice(a, priceMap) || Infinity;
-      const priceB = getFoodPrice(b, priceMap) || Infinity;
-      const costPerProteinA = priceA / a.proteinG;
-      const costPerProteinB = priceB / b.proteinG;
-      return costPerProteinA - costPerProteinB;
-    })[0] || foods[0];
+    .filter(food => food.proteinG > 5)
+    .sort((left, right) => {
+      const leftPrice = getFoodPrice(left, priceMap) || Number.POSITIVE_INFINITY;
+      const rightPrice = getFoodPrice(right, priceMap) || Number.POSITIVE_INFINITY;
+      return leftPrice / left.proteinG - rightPrice / right.proteinG;
+    })[0] ?? foods[0];
 }
 
 function preferBestByCostPerCarb(
@@ -326,107 +292,58 @@ function preferBestByCostPerCarb(
   priceMap?: Map<string, number>
 ): Food {
   return foods
-    .filter(f => f.carbsG > 10) // pelo menos 10g de carboidrato
-    .sort((a, b) => {
-      const priceA = getFoodPrice(a, priceMap) || Infinity;
-      const priceB = getFoodPrice(b, priceMap) || Infinity;
-      const costPerCarbA = priceA / a.carbsG;
-      const costPerCarbB = priceB / b.carbsG;
-      return costPerCarbA - costPerCarbB;
-    })[0] || foods[0];
+    .filter(food => food.carbsG > 10)
+    .sort((left, right) => {
+      const leftPrice = getFoodPrice(left, priceMap) || Number.POSITIVE_INFINITY;
+      const rightPrice = getFoodPrice(right, priceMap) || Number.POSITIVE_INFINITY;
+      return leftPrice / left.carbsG - rightPrice / right.carbsG;
+    })[0] ?? foods[0];
 }
 
 function resolveFoodIds(foods: Food[], identifiers: string[]): string[] {
   const normalizedIdentifiers = identifiers.map(identifier => identifier.trim().toLowerCase());
 
   return foods
-    .filter(food =>
-      normalizedIdentifiers.includes(food.id.toLowerCase()) ||
-      normalizedIdentifiers.includes(food.name.toLowerCase())
+    .filter(
+      food =>
+        normalizedIdentifiers.includes(food.id.toLowerCase()) ||
+        normalizedIdentifiers.includes(food.name.toLowerCase())
     )
     .map(food => food.id);
 }
 
-/**
- * Retorna preço por 100g do alimento (se disponível)
- * Aceita um mapa de preços pré-carregado para efficiency
- */
-export function getFoodPrice(
-  food: Food,
+function recalculateTotals(
+  foods: FoodQuantity[],
   priceMap?: Map<string, number>
-): number | null {
+): NutritionTotals {
+  return foods.reduce<NutritionTotals>(
+    (totals, food) => {
+      const factor = food.grams / 100;
+      totals.calories += factor * food.food.caloriesKcal;
+      totals.protein += factor * food.food.proteinG;
+      totals.fat += factor * food.food.fatG;
+      totals.carbs += factor * food.food.carbsG;
+      totals.fiber += factor * (food.food.fiberG || 0);
+      totals.cost += factor * (getFoodPrice(food.food, priceMap) || 0);
+      return totals;
+    },
+    {
+      calories: 0,
+      protein: 0,
+      fat: 0,
+      carbs: 0,
+      fiber: 0,
+      cost: 0,
+    }
+  );
+}
+
+export function getFoodPrice(food: Food, priceMap?: Map<string, number>): number | null {
   if (priceMap && priceMap.has(food.id)) {
     return priceMap.get(food.id) ?? null;
   }
+
   return null;
 }
 
-/**
- * Distribuição de macros para cada tipo de refeição
- */
-function getMacroDistributionForSlot(slot: string, totalCal: number): [number, number, number] {
-  switch (slot) {
-    case "cafe_manha":
-      return [
-        (totalCal * 0.25) / 4,   // protein g
-        (totalCal * 0.25) / 9,   // fat g
-        (totalCal * 0.50) / 4,   // carbs g
-      ];
-    case "almoco":
-      return [
-        (totalCal * 0.30) / 4,
-        (totalCal * 0.30) / 9,
-        (totalCal * 0.40) / 4,
-      ];
-    case "jantar":
-      return [
-        (totalCal * 0.35) / 4,
-        (totalCal * 0.35) / 9,
-        (totalCal * 0.30) / 4,
-      ];
-    default: // lanches
-      return [
-        (totalCal * 0.20) / 4,
-        (totalCal * 0.20) / 9,
-        (totalCal * 0.60) / 4,
-      ];
-  }
-}
-
-/**
- * Distribui calorias totais entre os slots de refeição
- * (copiado de diet-builder para evitar circular dependency)
- */
-export function distributeCaloriesBySlot(
-  totalCalories: number,
-  slots: string[]
-): Record<string, number> {
-  const distribution: Record<string, number> = {};
-
-  const defaultDist: Record<string, number> = {
-    cafe_manha: 0.25,
-    almoco: 0.35,
-    jantar: 0.30,
-    lanche1: 0.05,
-    lanche2: 0.05,
-  };
-
-  const usedDist: Record<string, number> = {};
-  let allocated = 0;
-
-  for (let i = 0; i < slots.length; i++) {
-    const slot = slots[i];
-    if (i < 3) {
-      usedDist[slot] = defaultDist[slot] || 0.30;
-    } else {
-      usedDist[slot] = 0.05;
-    }
-    allocated += usedDist[slot];
-  }
-
-  for (const slot of Object.keys(usedDist)) {
-    distribution[slot] = Math.round(totalCalories * (usedDist[slot] / allocated));
-  }
-
-  return distribution;
-}
+export { distributeCaloriesBySlot };

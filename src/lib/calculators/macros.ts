@@ -3,7 +3,7 @@
  * Baseada em evidências científicas e ajustada por objetivo, exercício, idade
  */
 
-import { CalculatedMetrics, Goal } from "./types";
+import type { Goal } from "./types";
 
 export interface MacroResult {
 	calories: number;

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { calculateNutrition, CalculatorInput } from "@/lib/calculators";
+import { calculateNutrition } from "@/lib/calculators";
+import { buildCalculatorInput } from "@/lib/calculators/adapters";
 
 const profileSchema = z.object({
 	userId: z.string(),
@@ -32,33 +33,23 @@ export async function POST(req: NextRequest) {
 		const data = profileSchema.parse(body);
 		console.log("Parsed data userId:", data.userId);
 
-		// Preparar input para calculadoras
-		const calculatorInput: CalculatorInput = {
-			profile: {
-				age: data.age,
-				sex: data.sex,
-				heightCm: data.heightCm,
-				weightKg: data.weightKg,
-				bodyFatPercentage: data.bodyFatPercentage,
-				country: data.country,
-				state: data.state,
-				city: data.city,
-			},
-			activity: {
-				activityLevel: data.activityLevel,
-				exerciseFrequencyDays: data.exerciseFrequency,
-				primaryExerciseType: data.primaryExerciseType,
-				exerciseDurationMin: data.exerciseDurationMin,
-				exerciseIntensity: data.exerciseIntensity,
-			},
-			work: {
-				workRoutine: data.workRoutine,
-			},
-			goal: {
-				type: data.goal,
-			},
-			// Geographical factors: omitidos, serão calculados automaticamente pela calculateNutrition
-		};
+		const calculatorInput = buildCalculatorInput({
+			age: data.age,
+			sex: data.sex,
+			heightCm: data.heightCm,
+			weightKg: data.weightKg,
+			bodyFatPercentage: data.bodyFatPercentage,
+			country: data.country,
+			state: data.state,
+			city: data.city,
+			activityLevel: data.activityLevel,
+			exerciseFrequency: data.exerciseFrequency,
+			primaryExerciseType: data.primaryExerciseType,
+			exerciseDurationMin: data.exerciseDurationMin,
+			exerciseIntensity: data.exerciseIntensity,
+			workRoutine: data.workRoutine,
+			goal: data.goal,
+		});
 
 		// Calcular métricas nutricionais completas
 		const nutritionResult = calculateNutrition(calculatorInput);

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { calculateDietTotals, formatDietFoods } from "@/lib/diets";
 
 export async function GET(req: NextRequest) {
   try {
@@ -26,28 +27,8 @@ export async function GET(req: NextRequest) {
     }
 
     // Formatar resposta
-    const formattedFoods = diet.foods.map(df => ({
-      foodId: df.foodId,
-      mealSlot: df.mealSlot,
-      name: df.food.name,
-      category: df.food.category,
-      grams: df.grams,
-      calories: (df.grams / 100) * df.food.caloriesKcal,
-      protein: (df.grams / 100) * df.food.proteinG,
-      fat: (df.grams / 100) * df.food.fatG,
-      carbs: (df.grams / 100) * df.food.carbsG,
-      fiber: (df.grams / 100) * (df.food.fiberG || 0),
-    }));
-
-    // Calcular totais
-    let totalCal = 0, totalP = 0, totalF = 0, totalC = 0, totalFib = 0;
-    formattedFoods.forEach((f) => {
-      totalCal += f.calories;
-      totalP += f.protein;
-      totalF += f.fat;
-      totalC += f.carbs;
-      totalFib += f.fiber;
-    });
+    const formattedFoods = formatDietFoods(diet.foods);
+    const totals = calculateDietTotals(diet.foods);
 
     return NextResponse.json({
       diet: {
@@ -64,11 +45,11 @@ export async function GET(req: NextRequest) {
       },
       foods: formattedFoods,
       summary: {
-        totalCalories: Math.round(totalCal),
-        totalProteinG: Math.round(totalP),
-        totalFatG: Math.round(totalF),
-        totalCarbsG: Math.round(totalC),
-        totalFiberG: Math.round(totalFib),
+        totalCalories: Math.round(totals.totalCalories),
+        totalProteinG: Math.round(totals.totalProteinG),
+        totalFatG: Math.round(totals.totalFatG),
+        totalCarbsG: Math.round(totals.totalCarbsG),
+        totalFiberG: Math.round(totals.totalFiberG),
       },
       notes: diet.aiReasoning ? diet.aiReasoning.split("; ") : [],
     });

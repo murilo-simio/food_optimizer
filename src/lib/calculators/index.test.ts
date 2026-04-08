@@ -45,12 +45,14 @@ describe("calculateNutrition", () => {
     expect(result.micronutrients.vitamins.vitaminD_UG).toBe(38);
     expect(result.micronutrients.minerals).toMatchObject({
       iron_MG: 8,
-      potassium_MG: 3150,
+      potassium_MG: 3060,
       sodium_MG: 1350,
     });
     expect(result.notes).toEqual(
       expect.arrayContaining([
         expect.stringContaining("TDEE (completo): 2455 kcal/dia"),
+        expect.stringContaining("Vitamina D: meta ajustada"),
+        expect.stringContaining("Exercício intenso"),
         expect.stringContaining("Vitamina D: necessidade aumentada"),
       ])
     );

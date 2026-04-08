@@ -8,7 +8,7 @@
  * Considera ajustes por: idade, sexo, clima/geografia, exercício, gravidez (futuro)
  */
 
-import { MicronutrientTargets, GeographicalFactors, UserProfile } from "./types";
+import type { GeographicalFactors, MicronutrientTargets, UserProfile } from "./types";
 
 // Baselines por sexo e faixa etária (DRI, RDA/AI)
 // Valores em mg ou µg/dia
@@ -34,7 +34,7 @@ interface BaselineNutrients {
 	selenium_UG: number;
 }
 
-function getBaselineNutrients(sex: "MALE" | "FEMALE", age: number): BaselineNutrients {
+function getBaselineNutrients(sex: "MALE" | "FEMALE"): BaselineNutrients {
 	// Valores para adultos 19-50 anos ( ajuste por idade posterior )
 	if (sex === "MALE") {
 		return {
@@ -148,7 +148,7 @@ export function calculateMicronutrients(
 	hasIntenseExercise?: boolean,
 	exerciseHoursPerWeek?: number
 ): MicronutrientTargets {
-	const baseline = getBaselineNutrients(profile.sex, profile.age);
+	const baseline = getBaselineNutrients(profile.sex);
 
 	// Aplica ajustes geográficos
 	let adjusted = applyGeographicalFactors(baseline, geoFactors);

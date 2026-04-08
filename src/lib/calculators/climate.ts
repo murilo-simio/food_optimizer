@@ -133,12 +133,6 @@ export function calculateClimateAdjustment(
 	// Aplicamos um multiplier sobre a baseline de 2.5L
 	const waterMultiplier = factors.electrolyteMultiplier; // mesma lógica
 
-	// Ajustes de micronutrientes
-	const micronutrientMultipliers = {
-		vitaminD: factors.vitaminDMultiplier,
-		electrolytes: factors.electrolyteMultiplier,
-	};
-
 	const notes: string[] = [];
 
 	if (factors.climateZone === "COLD") {
