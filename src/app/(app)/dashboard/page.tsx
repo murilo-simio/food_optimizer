@@ -13,6 +13,7 @@ import {
   PencilLine,
   SkipForward,
 } from "lucide-react";
+import { getProtectedPageState } from "@/lib/auth-redirect";
 import { cn } from "@/lib/utils";
 
 type MealSlot = "cafe_manha" | "almoco" | "lanche1" | "jantar" | "lanche2";
@@ -185,13 +186,20 @@ export default function DashboardPage() {
   const [storageReady, setStorageReady] = useState(false);
   const [currentTime, setCurrentTime] = useState(() => new Date());
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
+  const protectedPageState = getProtectedPageState(status, !!session?.user);
 
   const dayKey = getLocalDateKey(currentTime);
   const currentMealWindow = getCurrentMealWindow(currentTime);
   const displayedMealWindow = getDisplayedMealWindow(currentMealWindow, mealStatuses);
 
   useEffect(() => {
-    if (status === "loading" || !session?.user?.id) return;
+    if (protectedPageState === "redirect") {
+      router.push("/login");
+    }
+  }, [protectedPageState, router]);
+
+  useEffect(() => {
+    if (protectedPageState !== "ready" || !session?.user?.id) return;
 
     const loadDashboard = async () => {
       try {
@@ -229,7 +237,7 @@ export default function DashboardPage() {
     };
 
     void loadDashboard();
-  }, [router, session, status]);
+  }, [protectedPageState, router, session?.user?.id]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -281,7 +289,7 @@ export default function DashboardPage() {
     );
   }, [dayKey, mealStatuses, session?.user?.id, storageReady]);
 
-  if (status === "loading" || !session) {
+  if (protectedPageState === "loading" || !session) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent" />
@@ -289,8 +297,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (!session.user) {
-    router.push("/login");
+  if (protectedPageState === "redirect" || !session.user) {
     return null;
   }
 

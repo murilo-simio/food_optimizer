@@ -1,4 +1,5 @@
-import { Prisma, PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 
 const prisma = new PrismaClient();
 
@@ -394,7 +395,7 @@ async function main() {
       } catch (error) {
         // Se já existir (unique constraint), ignora
         if (
-          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error instanceof PrismaClientKnownRequestError &&
           error.code === "P2002"
         ) {
           skippedCount++;
@@ -413,9 +414,11 @@ async function main() {
 
     // Exibir alguns alimentos como exemplo
     console.log("\n📋 Amostra de alimentos:");
-    const sample = allFoods.slice(0, 5);
-    sample.forEach((f) => {
-      console.log(`  - ${f.name}: ${f.caloriesKcal} kcal, P:${f.proteinG}g, C:${f.carbsG}g, G:${f.fatG}g`);
+    const sample: typeof allFoods = allFoods.slice(0, 5);
+    sample.forEach((food: (typeof allFoods)[number]) => {
+      console.log(
+        `  - ${food.name}: ${food.caloriesKcal} kcal, P:${food.proteinG}g, C:${food.carbsG}g, G:${food.fatG}g`
+      );
     });
 
     console.log("\n✅ Seed concluído com sucesso!");

@@ -3,12 +3,21 @@
 import { MessageSquareText } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { getProtectedPageState } from "@/lib/auth-redirect";
 
 export default function ChatPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const protectedPageState = getProtectedPageState(status, !!session?.user);
 
-  if (status === "loading") {
+  useEffect(() => {
+    if (protectedPageState === "redirect") {
+      router.push("/login");
+    }
+  }, [protectedPageState, router]);
+
+  if (protectedPageState === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent" />
@@ -16,8 +25,7 @@ export default function ChatPage() {
     );
   }
 
-  if (!session?.user) {
-    router.push("/login");
+  if (protectedPageState === "redirect" || !session?.user) {
     return null;
   }
 
